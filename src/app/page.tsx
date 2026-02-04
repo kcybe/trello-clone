@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -481,11 +481,75 @@ export default function Home() {
   const deleteCard = (columnId: string, cardId: string) => {
     if (!board) return;
 
+    const column = board.columns.find(col => col.id === columnId);
+    const card = column?.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    // Archive the card instead of permanent delete
     pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
         col.id === columnId
-          ? { ...col, cards: col.cards.filter((card) => card.id !== cardId) }
+          ? {
+              ...col,
+              cards: col.cards.filter((card) => card.id !== cardId),
+              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+            }
+          : col
+      ),
+    });
+  };
+
+  const archiveCard = (columnId: string, cardId: string) => {
+    if (!board) return;
+
+    const column = board.columns.find(col => col.id === columnId);
+    const card = column?.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    pushToHistory({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: col.cards.filter((card) => card.id !== cardId),
+              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+            }
+          : col
+      ),
+    });
+  };
+
+  const unarchiveCard = (columnId: string, cardId: string) => {
+    if (!board) return;
+
+    const column = board.columns.find(col => col.id === columnId);
+    const card = column?.archivedCards?.find(c => c.id === cardId);
+    if (!card) return;
+
+    pushToHistory({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: [...col.cards, { ...card, archived: false }],
+              archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [],
+            }
+          : col
+      ),
+    });
+  };
+
+  const permanentlyDeleteCard = (columnId: string, cardId: string) => {
+    if (!board) return;
+
+    pushToHistory({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? { ...col, archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [] }
           : col
       ),
     });
@@ -907,10 +971,11 @@ export default function Home() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-destructive"
-                                    onClick={() => deleteCard(column.id, card.id)}
+                                    className="h-6 w-6 text-muted-foreground"
+                                    onClick={() => archiveCard(column.id, card.id)}
+                                    title="Archive card"
                                   >
-                                    <X className="h-3 w-3" />
+                                    <Archive className="h-3 w-3" />
                                   </Button>
                                 </div>
                               </div>
@@ -1020,6 +1085,47 @@ export default function Home() {
                   </div>
                 </DialogContent>
               </Dialog>
+              
+              {/* Archived Cards */}
+              {column.archivedCards && column.archivedCards.length > 0 && (
+                <div className="mt-4 border-t pt-2">
+                  <details open>
+                    <summary className="text-sm font-medium cursor-pointer flex items-center gap-2 text-muted-foreground">
+                      <Archive className="h-4 w-4" />
+                      Archived ({column.archivedCards.length})
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {column.archivedCards.map(card => (
+                        <Card key={card.id} className="opacity-60">
+                          <CardContent className="p-2 flex items-center justify-between">
+                            <span className="text-sm truncate flex-1">{card.title}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => unarchiveCard(column.id, card.id)}
+                                title="Restore"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive"
+                                onClick={() => permanentlyDeleteCard(column.id, card.id)}
+                                title="Delete permanently"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
           ))}
 
