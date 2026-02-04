@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock } from "lucide-react";
+import ActivityPanel from "@/components/ActivityPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment } from "@/types";
+import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType } from "@/types";
 
 const STORAGE_KEY = "trello-clone-board";
 
@@ -311,6 +312,62 @@ export default function Home() {
   const [reminder1Hour, setReminder1Hour] = useState(true);
   const [overdueAlerts, setOverdueAlerts] = useState(true);
   const [lastNotificationCheck, setLastNotificationCheck] = useState<Date | null>(null);
+
+  // Activity Log state
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [showActivity, setShowActivity] = useState(false);
+  const ACTIVITIES_STORAGE_KEY = "trello-clone-activities";
+
+  // Load activities from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(ACTIVITIES_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setActivities(parsed.map((a: any) => ({
+          ...a,
+          timestamp: new Date(a.timestamp)
+        })));
+      } catch (e) {
+        console.error("Failed to load activities", e);
+      }
+    }
+  }, []);
+
+  // Save activities to localStorage
+  useEffect(() => {
+    localStorage.setItem(ACTIVITIES_STORAGE_KEY, JSON.stringify(activities));
+  }, [activities]);
+
+  // Add activity helper function
+  const addActivity = useCallback((
+    type: ActivityType, 
+    cardId: string, 
+    cardTitle: string,
+    options?: {
+      fromColumnId?: string;
+      fromColumnName?: string;
+      toColumnId?: string;
+      toColumnName?: string;
+      description?: string;
+      user?: string;
+    }
+  ) => {
+    const newActivity: Activity = {
+      id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      cardId,
+      cardTitle,
+      timestamp: new Date(),
+      user: options?.user || "Current User",
+      fromColumnId: options?.fromColumnId,
+      fromColumnName: options?.fromColumnName,
+      toColumnId: options?.toColumnId,
+      toColumnName: options?.toColumnName,
+      description: options?.description,
+    };
+    setActivities(prev => [newActivity, ...prev].slice(0, 100)); // Keep last 100 activities
+  }, []);
 
   // Load notification settings from localStorage
   useEffect(() => {
@@ -656,6 +713,7 @@ export default function Home() {
   const addCard = (columnId: string) => {
     if (!newCardTitle.trim() || !board) return;
 
+    const column = board.columns.find(col => col.id === columnId);
     const newCard: CardType = {
       id: `card-${Date.now()}`,
       title: newCardTitle.trim(),
@@ -673,6 +731,12 @@ export default function Home() {
       columns: board.columns.map((col) =>
         col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
       ),
+    });
+
+    // Track activity
+    addActivity("card_created", newCard.id, newCardTitle.trim(), {
+      toColumnId: columnId,
+      toColumnName: column?.title,
     });
 
     setNewCardTitle("");
@@ -720,6 +784,12 @@ export default function Home() {
           : col
       ),
     });
+
+    // Track activity
+    addActivity("card_archived", cardId, card.title, {
+      fromColumnId: columnId,
+      fromColumnName: column?.title,
+    });
   };
 
   const unarchiveCard = (columnId: string, cardId: string) => {
@@ -741,10 +811,19 @@ export default function Home() {
           : col
       ),
     });
+
+    // Track activity
+    addActivity("card_restored", cardId, card.title, {
+      toColumnId: columnId,
+      toColumnName: column?.title,
+    });
   };
 
   const permanentlyDeleteCard = (columnId: string, cardId: string) => {
     if (!board) return;
+
+    const column = board.columns.find(col => col.id === columnId);
+    const card = column?.archivedCards?.find(c => c.id === cardId);
 
     pushToHistory({
       ...board,
@@ -754,6 +833,14 @@ export default function Home() {
           : col
       ),
     });
+
+    // Track activity
+    if (card) {
+      addActivity("card_deleted", cardId, card.title, {
+        fromColumnId: columnId,
+        fromColumnName: column?.title,
+      });
+    }
   };
 
   const duplicateCard = (columnId: string, cardId: string) => {
@@ -782,12 +869,20 @@ export default function Home() {
           : col
       ),
     });
+
+    // Track activity
+    addActivity("card_duplicated", newCard.id, newCard.title, {
+      fromColumnId: columnId,
+      fromColumnName: column?.title,
+      description: `Duplicated from "${card.title}"`,
+    });
   };
 
   const moveCard = (cardId: string, fromColumnId: string, toColumnId: string) => {
     if (!board || fromColumnId === toColumnId) return;
 
     const fromColumn = board.columns.find(col => col.id === fromColumnId);
+    const toColumn = board.columns.find(col => col.id === toColumnId);
     const card = fromColumn?.cards.find(c => c.id === cardId);
     if (!card) return;
 
@@ -802,6 +897,14 @@ export default function Home() {
         }
         return col;
       }),
+    });
+
+    // Track activity
+    addActivity("card_moved", cardId, card.title, {
+      fromColumnId,
+      fromColumnName: fromColumn?.title,
+      toColumnId,
+      toColumnName: toColumn?.title,
     });
     
     setMoveCardOpen(null);
@@ -870,6 +973,44 @@ export default function Home() {
   const updateCard = () => {
     if (!editingCard || !board) return;
 
+    // Get original card to detect changes
+    const originalColumn = board.columns.find(col => col.id === editingCard.columnId);
+    const originalCard = originalColumn?.cards.find(c => c.id === editingCard.id);
+
+    const updates: string[] = [];
+    
+    // Check what changed
+    if (originalCard && originalCard.title !== editingCard.title) {
+      updates.push("title");
+    }
+    if (originalCard && originalCard.description !== editingCard.description) {
+      updates.push("description");
+    }
+    if (originalCard && JSON.stringify(originalCard.labels) !== JSON.stringify(editingCard.labels)) {
+      updates.push("labels");
+    }
+    if (originalCard && originalCard.assignee !== (editingCard.assignee || undefined)) {
+      updates.push("assignee");
+    }
+    
+    // Check due date changes
+    const originalDueDate = originalCard?.dueDate ? new Date(originalCard.dueDate).toISOString().split("T")[0] : "";
+    if (originalDueDate !== editingCard.dueDate) {
+      if (originalDueDate && !editingCard.dueDate) {
+        // Due date was cleared - no activity for this
+      } else if (!originalDueDate && editingCard.dueDate) {
+        // Track due date set
+        addActivity("due_date_set", editingCard.id, editingCard.title, {
+          description: `Due: ${editingCard.dueDate}`,
+        });
+      } else if (originalDueDate && editingCard.dueDate) {
+        // Track due date change
+        addActivity("due_date_changed", editingCard.id, editingCard.title, {
+          description: `Changed from ${originalDueDate} to ${editingCard.dueDate}`,
+        });
+      }
+    }
+
     pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
@@ -897,6 +1038,15 @@ export default function Home() {
       ),
     });
 
+    // Track activity
+    if (originalCard) {
+      if (updates.length > 0) {
+        addActivity("card_edited", editingCard.id, editingCard.title, {
+          description: `Changed: ${updates.join(", ")}`,
+        });
+      }
+    }
+
     setEditingCard(null);
   };
 
@@ -913,6 +1063,13 @@ export default function Home() {
       ...editingCard,
       comments: [...(editingCard.comments || []), newComment],
     });
+    
+    // Track activity
+    addActivity("comment_added", editingCard.id, editingCard.title, {
+      description: `"${newComment.text.substring(0, 50)}${newComment.text.length > 50 ? "..." : ""}"`,
+      user: newCommentAuthor.trim(),
+    });
+    
     setNewCommentText("");
   };
 
@@ -937,6 +1094,12 @@ export default function Home() {
       ...editingCard,
       labels: [...editingCard.labels, newLabel],
     });
+    
+    // Track activity
+    addActivity("label_added", editingCard.id, editingCard.title, {
+      description: `"${newLabel.text}"`,
+    });
+    
     setNewLabelText("");
   };
 
@@ -953,6 +1116,12 @@ export default function Home() {
   const addMember = () => {
     if (!newMemberName.trim() || !editingCard) return;
     setEditingCard({ ...editingCard, assignee: newMemberName.trim() });
+    
+    // Track activity
+    addActivity("member_assigned", editingCard.id, editingCard.title, {
+      description: newMemberName.trim(),
+    });
+    
     setNewMemberName("");
     setShowMemberSuggestions(false);
   };
@@ -1331,6 +1500,16 @@ export default function Home() {
           {/* Export button */}
           <Button variant="ghost" size="icon" onClick={exportBoard} title="Export board (JSON)">
             <Download className="h-5 w-5" />
+          </Button>
+          
+          {/* Activity Log toggle */}
+          <Button 
+            variant={showActivity ? "default" : "ghost"} 
+            size="icon" 
+            onClick={() => setShowActivity(!showActivity)}
+            title="Activity Log"
+          >
+            <Clock className="h-5 w-5" />
           </Button>
         </div>
       </header>
@@ -2198,6 +2377,14 @@ export default function Home() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Activity Panel */}
+      {showActivity && (
+        <ActivityPanel 
+          activities={activities} 
+          onClose={() => setShowActivity(false)} 
+        />
+      )}
     </div>
   );
 }

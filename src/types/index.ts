@@ -1,3 +1,22 @@
+export type ActivityType = 
+  | "card_created" | "card_moved" | "card_edited" | "card_archived" 
+  | "card_restored" | "card_deleted" | "card_duplicated" | "comment_added" 
+  | "due_date_set" | "due_date_changed" | "label_added" | "member_assigned";
+
+export type Activity = {
+  id: string;
+  type: ActivityType;
+  cardId: string;
+  cardTitle: string;
+  fromColumnId?: string;
+  fromColumnName?: string;
+  toColumnId?: string;
+  toColumnName?: string;
+  description?: string;
+  timestamp: Date;
+  user: string;
+};
+
 export type CardLabel = {
   id: string;
   text: string;
