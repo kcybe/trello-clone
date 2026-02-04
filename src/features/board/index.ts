@@ -10,6 +10,7 @@ export { BoardFooter } from './components/BoardFooter';
 
 // Hooks
 export { useBoard, BOARD_TEMPLATES, apiBoardToLocal } from './hooks/useBoard';
+export { useBoardSocket } from './hooks/useBoardSocket';
 export {
   useCards,
   useActivities,

@@ -158,7 +158,7 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
 
 const STORAGE_KEY = 'trello-clone-boards';
 
-interface UseBoardReturn {
+export interface UseBoardReturn {
   // State
   boardList: BoardList;
   boardHistory: BoardList[];
@@ -362,6 +362,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
       const newColumn: Column = {
         id: `col-${Date.now()}`,
         title: name.trim(),
+        name: name.trim(),
         cards: [],
       };
 

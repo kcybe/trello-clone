@@ -100,3 +100,9 @@ export function useSocketEmitter(boardId: string | null) {
     emitBoardUpdated,
   };
 }
+
+// Re-export other socket modules
+export * from './server';
+export * from './client';
+export * from './hooks';
+export * from './real-time';
