@@ -87,7 +87,7 @@ export default function Home() {
     title: string;
     description: string;
     labels: CardLabel[];
-    assignee: string;
+    assignee: string | undefined;
     attachments: CardAttachment[];
     checklists: Checklist[];
     dueDate: string;
