@@ -15,9 +15,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType } from "@/types";
+import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType, BoardList } from "@/types";
 
-const STORAGE_KEY = "trello-clone-board";
+const STORAGE_KEY = "trello-clone-boards";
+
+// Default columns template
+const DEFAULT_COLUMNS: Column[] = [
+  { id: "todo", title: "To Do", cards: [] },
+  { id: "in-progress", title: "In Progress", cards: [] },
+  { id: "done", title: "Done", cards: [] },
+];
+
+// Initial board
+const createInitialBoard = (name: string = "My Board"): Board => ({
+  id: `board-${Date.now()}`,
+  name,
+  columns: DEFAULT_COLUMNS,
+  createdAt: Date.now(),
+});
+
+// Board templates
+const BOARD_TEMPLATES: { name: string; columns: string[] }[] = [
+  { name: "Kanban", columns: ["To Do", "In Progress", "Done"] },
+  { name: "Scrum", columns: ["Backlog", "Sprint", "In Progress", "Testing", "Done"] },
+  { name: "Basic", columns: ["To Do", "Doing", "Done"] },
+  { name: "Project", columns: ["Ideas", "Planning", "In Progress", "Review", "Complete"] },
+];
 
 // Label colors
 const LABEL_COLORS = [
@@ -40,6 +63,9 @@ const SHORTCUTS = {
 };
 
 const initialBoard: Board = {
+  id: "board-initial",
+  name: "My Board",
+  createdAt: Date.now(),
   columns: [
     {
       id: "todo",
@@ -221,40 +247,109 @@ function CalendarView({ board, onEditCard }: { board: Board; onEditCard: (card: 
 }
 
 export default function Home() {
-  const [board, setBoard] = useState<Board | null>(null);
-  const [boardHistory, setBoardHistory] = useState<(Board | null)[]>([]);
+  // Multiple boards state
+  const [boardList, setBoardList] = useState<BoardList>({
+    boards: [],
+    currentBoardId: null,
+  });
+  const [boardHistory, setBoardHistory] = useState<BoardList[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const MAX_HISTORY = 50;
   
+  // Derived: current board
+  const currentBoard = useMemo(() => {
+    if (!boardList.currentBoardId) return null;
+    return boardList.boards.find(b => b.id === boardList.currentBoardId) || null;
+  }, [boardList]);
+  
   // Helper to push to history
-  const pushToHistory = (newBoard: Board | null) => {
+  const pushToHistory = (newBoardList: BoardList) => {
     const newHistory = boardHistory.slice(0, historyIndex + 1);
-    newHistory.push(newBoard);
+    newHistory.push(newBoardList);
     if (newHistory.length > MAX_HISTORY) {
       newHistory.shift();
     }
     setBoardHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-    setBoard(newBoard);
+    setBoardList(newBoardList);
   };
   
-  // Undo function
+  // Board CRUD operations
+  const createBoard = (name: string) => {
+    const newBoard = createInitialBoard(name);
+    const newList: BoardList = {
+      boards: [...boardList.boards, newBoard],
+      currentBoardId: newBoard.id,
+    };
+    pushToHistory(newList);
+    return newBoard;
+  };
+  
+  const switchBoard = (boardId: string) => {
+    const newList: BoardList = {
+      ...boardList,
+      currentBoardId: boardId,
+    };
+    pushToHistory(newList);
+  };
+  
+  const deleteBoard = (boardId: string) => {
+    const newBoards = boardList.boards.filter(b => b.id !== boardId);
+    let newCurrentId = boardList.currentBoardId;
+    if (boardId === boardList.currentBoardId) {
+      newCurrentId = newBoards[0]?.id || null;
+    }
+    const newList: BoardList = {
+      boards: newBoards,
+      currentBoardId: newCurrentId,
+    };
+    pushToHistory(newList);
+  };
+  
+  const duplicateBoard = (boardId: string) => {
+    const original = boardList.boards.find(b => b.id === boardId);
+    if (!original) return;
+    
+    const newBoard: Board = {
+      ...original,
+      id: `board-${Date.now()}`,
+      name: `${original.name} (Copy)`,
+      createdAt: Date.now(),
+    };
+    
+    const newList: BoardList = {
+      boards: [...boardList.boards, newBoard],
+      currentBoardId: newBoard.id,
+    };
+    pushToHistory(newList);
+  };
+  
+  // Undo/Redo
   const undo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
-      setBoard(boardHistory[newIndex]);
+      setBoardList(boardHistory[newIndex]);
     }
   };
   
-  // Redo function
   const redo = () => {
     if (historyIndex < boardHistory.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
-      setBoard(boardHistory[newIndex]);
+      setBoardList(boardHistory[newIndex]);
     }
   };
+  
+  // Helper to update current board
+  const updateCurrentBoard = (updateFn: (board: Board) => Board) => {
+    const newBoards = boardList.boards.map(b => {
+      if (b.id !== boardList.currentBoardId) return b;
+      return updateFn(b);
+    });
+    pushToHistory({ ...boardList, boards: newBoards });
+  };
+  
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -268,6 +363,7 @@ export default function Home() {
   const [filterLabel, setFilterLabel] = useState<string>("");
   const [filterMember, setFilterMember] = useState<string>("");
   const [isCompact, setIsCompact] = useState(false);
+  const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [moveCardOpen, setMoveCardOpen] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<{ card: CardType; columnId: string; index: number } | null>(null);
   
@@ -507,39 +603,64 @@ export default function Home() {
     localStorage.setItem("trello-clone-dark", JSON.stringify(isDark));
   }, [isDark]);
 
-  // Load board from local storage
+  // Load boardList from local storage
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        parsed.columns.forEach((col: Column) => {
-          col.cards.forEach((card: CardType) => {
-            card.createdAt = new Date(card.createdAt);
-            if (card.dueDate) card.dueDate = new Date(card.dueDate);
-            // Ensure new fields exist for backward compatibility
-            if (!card.assignee) card.assignee = undefined;
-            if (!card.attachments) card.attachments = [];
-            if (!card.checklists) card.checklists = [];
-            if (!card.comments) card.comments = [];
+        // Check if it's old format (single board) or new format (board list)
+        if (parsed.columns) {
+          // Old format - convert to new format
+          const oldBoard = parsed;
+          oldBoard.columns.forEach((col: Column) => {
+            col.cards.forEach((card: CardType) => {
+              card.createdAt = new Date(card.createdAt);
+              if (card.dueDate) card.dueDate = new Date(card.dueDate);
+              if (!card.assignee) card.assignee = undefined;
+              if (!card.attachments) card.attachments = [];
+              if (!card.checklists) card.checklists = [];
+              if (!card.comments) card.comments = [];
+            });
           });
-        });
-        setBoard(parsed);
+          const newBoardList: BoardList = {
+            boards: [{ ...oldBoard, id: `board-${Date.now()}`, name: "My Board", createdAt: Date.now() }],
+            currentBoardId: oldBoard.id,
+          };
+          newBoardList.boards[0].id = `board-${Date.now()}`;
+          newBoardList.boards[0].createdAt = Date.now();
+          setBoardList(newBoardList);
+        } else {
+          // New format
+          const boardList = parsed as BoardList;
+          boardList.boards.forEach(board => {
+            board.createdAt = Number(board.createdAt);
+            board.columns.forEach(col => {
+              col.cards.forEach(card => {
+                card.createdAt = new Date(card.createdAt);
+                if (card.dueDate) card.dueDate = new Date(card.dueDate);
+              });
+            });
+          });
+          setBoardList(boardList);
+        }
       } catch (e) {
-        setBoard(initialBoard);
+        const initial = createInitialBoard();
+        setBoardList({ boards: [initial], currentBoardId: initial.id });
       }
     } else {
-      setBoard(initialBoard);
+      const initial = createInitialBoard();
+      setBoardList({ boards: [initial], currentBoardId: initial.id });
     }
     setIsLoaded(true);
   }, []);
 
-  // Save board to local storage
+  // Save boardList to local storage
   useEffect(() => {
-    if (isLoaded && board) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
+    if (isLoaded && boardList) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(boardList));
     }
-  }, [board, isLoaded]);
+  }, [boardList, isLoaded]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -602,122 +723,51 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [board, boardHistory, historyIndex]);
 
-  // Filter and sort cards
-  const filteredBoard = useMemo(() => {
-    if (!board) return board;
-    
-    let result = board;
-    
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = {
-        ...board,
-        columns: board.columns.map(col => ({
-          ...col,
-          cards: col.cards.filter(card => 
-            card.title.toLowerCase().includes(query) ||
-            card.description?.toLowerCase().includes(query) ||
-            card.labels?.some(l => l.text.toLowerCase().includes(query))
-          )
-        }))
-      };
-    }
-    
-    // Apply label filter
-    if (filterLabel) {
-      result = {
-        ...result,
-        columns: result.columns.map(col => ({
-          ...col,
-          cards: col.cards.filter(card => 
-            card.labels?.some(l => l.text === filterLabel)
-          )
-        }))
-      };
-    }
-    
-    // Apply member filter
-    if (filterMember) {
-      result = {
-        ...result,
-        columns: result.columns.map(col => ({
-          ...col,
-          cards: col.cards.filter(card => 
-            card.assignee === filterMember
-          )
-        }))
-      };
-    }
-    
-    // Apply sorting
-    if (sortBy !== "manual") {
-      result = {
-        ...result,
-        columns: result.columns.map(col => ({
-          ...col,
-          cards: [...col.cards].sort((a, b) => {
-            let comparison = 0;
-            if (sortBy === "title") {
-              comparison = a.title.localeCompare(b.title);
-            } else if (sortBy === "date") {
-              const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-              const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-              comparison = dateA - dateB;
-            }
-            return sortOrder === "asc" ? comparison : -comparison;
-          })
-        }))
-      };
-    }
-    
-    return result;
-  }, [board, searchQuery, sortBy, sortOrder, filterLabel, filterMember]);
-
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
-    if (!destination || !board) return;
+    if (!destination || !currentBoard) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const sourceColumn = board.columns.find((col) => col.id === source.droppableId);
-    const destColumn = board.columns.find((col) => col.id === destination.droppableId);
+    const sourceColumn = currentBoard.columns.find((col) => col.id === source.droppableId);
+    const destColumn = currentBoard.columns.find((col) => col.id === destination.droppableId);
 
     if (!sourceColumn || !destColumn) return;
 
-    if (source.droppableId === destination.droppableId) {
-      const newCards = Array.from(sourceColumn.cards);
-      const [removed] = newCards.splice(source.index, 1);
-      newCards.splice(destination.index, 0, removed);
-
-      pushToHistory({
-        ...board,
-        columns: board.columns.map((col) =>
+    // Create new board with updated columns
+    const newBoards = boardList.boards.map(b => {
+      if (b.id !== boardList.currentBoardId) return b;
+      
+      let newColumns = b.columns;
+      
+      if (source.droppableId === destination.droppableId) {
+        const newCards = Array.from(sourceColumn.cards);
+        const [removed] = newCards.splice(source.index, 1);
+        newCards.splice(destination.index, 0, removed);
+        newColumns = b.columns.map(col =>
           col.id === source.droppableId ? { ...col, cards: newCards } : col
-        ),
-      });
-    } else {
-      const sourceCards = Array.from(sourceColumn.cards);
-      const destCards = Array.from(destColumn.cards);
-      const [removed] = sourceCards.splice(source.index, 1);
-      destCards.splice(destination.index, 0, removed);
-
-      pushToHistory({
-        ...board,
-        columns: board.columns.map((col) =>
-          col.id === source.droppableId
-            ? { ...col, cards: sourceCards }
-            : col.id === destination.droppableId
-            ? { ...col, cards: destCards }
-            : col
-        ),
-      });
-    }
+        );
+      } else {
+        const sourceCards = Array.from(sourceColumn.cards);
+        const destCards = Array.from(destColumn.cards);
+        const [removed] = sourceCards.splice(source.index, 1);
+        destCards.splice(destination.index, 0, removed);
+        newColumns = b.columns.map(col => {
+          if (col.id === source.droppableId) return { ...col, cards: sourceCards };
+          if (col.id === destination.droppableId) return { ...col, cards: destCards };
+          return col;
+        });
+      }
+      
+      return { ...b, columns: newColumns };
+    });
+    
+    pushToHistory({ ...boardList, boards: newBoards });
   };
 
   const addCard = (columnId: string) => {
-    if (!newCardTitle.trim() || !board) return;
+    if (!newCardTitle.trim() || !currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const newCard: CardType = {
       id: `card-${Date.now()}`,
       title: newCardTitle.trim(),
@@ -730,12 +780,12 @@ export default function Home() {
       comments: [],
     };
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     addActivity("card_created", newCard.id, newCardTitle.trim(), {
@@ -770,15 +820,15 @@ export default function Home() {
   };
 
   const archiveCard = (columnId: string, cardId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.cards.find(c => c.id === cardId);
     if (!card) return;
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId
           ? {
               ...col,
@@ -786,8 +836,8 @@ export default function Home() {
               archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
             }
           : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     addActivity("card_archived", cardId, card.title, {
@@ -797,15 +847,15 @@ export default function Home() {
   };
 
   const unarchiveCard = (columnId: string, cardId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.archivedCards?.find(c => c.id === cardId);
     if (!card) return;
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId
           ? {
               ...col,
@@ -813,8 +863,8 @@ export default function Home() {
               archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [],
             }
           : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     addActivity("card_restored", cardId, card.title, {
@@ -848,9 +898,9 @@ export default function Home() {
   };
 
   const duplicateCard = (columnId: string, cardId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.cards.find(c => c.id === cardId);
     if (!card) return;
 
@@ -862,17 +912,17 @@ export default function Home() {
       comments: [],
     };
 
-    const targetColumn = board.columns.find(col => col.id === columnId);
-    if (!targetColumn) return;
+    const cardIndex = column?.cards.findIndex(c => c.id === cardId);
+    if (cardIndex === undefined || cardIndex === -1) return;
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId
-          ? { ...col, cards: [...col.cards.slice(0, targetColumn.cards.findIndex(c => c.id === cardId) + 1), newCard, ...col.cards.slice(targetColumn.cards.findIndex(c => c.id === cardId) + 1)] }
+          ? { ...col, cards: [...col.cards.slice(0, cardIndex + 1), newCard, ...col.cards.slice(cardIndex + 1)] }
           : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     addActivity("card_duplicated", newCard.id, newCard.title, {
@@ -883,16 +933,16 @@ export default function Home() {
   };
 
   const moveCard = (cardId: string, fromColumnId: string, toColumnId: string) => {
-    if (!board || fromColumnId === toColumnId) return;
+    if (!currentBoard || fromColumnId === toColumnId) return;
 
-    const fromColumn = board.columns.find(col => col.id === fromColumnId);
-    const toColumn = board.columns.find(col => col.id === toColumnId);
+    const fromColumn = currentBoard.columns.find(col => col.id === fromColumnId);
+    const toColumn = currentBoard.columns.find(col => col.id === toColumnId);
     const card = fromColumn?.cards.find(c => c.id === cardId);
     if (!card) return;
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) => {
+      columns: board.columns.map(col => {
         if (col.id === fromColumnId) {
           return { ...col, cards: col.cards.filter(c => c.id !== cardId) };
         }
@@ -900,8 +950,8 @@ export default function Home() {
           return { ...col, cards: [...col.cards, card] };
         }
         return col;
-      }),
-    });
+      })
+    }));
 
     // Track activity
     addActivity("card_moved", cardId, card.title, {
@@ -915,7 +965,7 @@ export default function Home() {
   };
 
   const addColumn = () => {
-    if (!newColumnTitle.trim() || !board) return;
+    if (!newColumnTitle.trim() || !currentBoard) return;
 
     const newColumn: Column = {
       id: `col-${Date.now()}`,
@@ -923,31 +973,33 @@ export default function Home() {
       cards: [],
     };
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
       columns: [...board.columns, newColumn],
-    });
+    }));
 
     setNewColumnTitle("");
   };
 
   const deleteColumn = (columnId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
       columns: board.columns.filter((col) => col.id !== columnId),
-    });
+    }));
   };
 
   const exportBoard = () => {
-    if (!board) return;
+    if (!currentBoard) return;
     
     const exportData = {
       version: "1.0",
       exportedAt: new Date().toISOString(),
       board: {
-        columns: board.columns.map(col => ({
+        id: currentBoard.id,
+        name: currentBoard.name,
+        columns: currentBoard.columns.map(col => ({
           ...col,
           cards: col.cards.map(card => ({
             ...card,
@@ -969,16 +1021,16 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `trello-clone-board-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `${currentBoard.name.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const updateCard = () => {
-    if (!editingCard || !board) return;
+    if (!editingCard || !currentBoard) return;
 
     // Get original card to detect changes
-    const originalColumn = board.columns.find(col => col.id === editingCard.columnId);
+    const originalColumn = currentBoard.columns.find(col => col.id === editingCard.columnId);
     const originalCard = originalColumn?.cards.find(c => c.id === editingCard.id);
 
     const updates: string[] = [];
@@ -1015,7 +1067,7 @@ export default function Home() {
       }
     }
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
       columns: board.columns.map((col) =>
         col.id === editingCard.columnId
@@ -1039,8 +1091,8 @@ export default function Home() {
               ),
             }
           : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     if (originalCard) {
@@ -1288,7 +1340,61 @@ export default function Home() {
     <div className="min-h-screen bg-background transition-colors">
       {/* Header */}
       <header className="border-b p-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Trello Clone</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold">Trello Clone</h1>
+          
+          {/* Board Switcher */}
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBoardDropdown(!showBoardDropdown)}
+              className="gap-1"
+            >
+              <Layout className="h-4 w-4" />
+              {currentBoard?.name || "Select Board"}
+            </Button>
+            {showBoardDropdown && (
+              <div className="absolute left-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-50 min-w-48">
+                <div className="p-2 border-b">
+                  <span className="text-sm font-medium text-muted-foreground">Boards</span>
+                </div>
+                {boardList.boards.map(board => (
+                  <button
+                    key={board.id}
+                    onClick={() => {
+                      switchBoard(board.id);
+                      setShowBoardDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-muted ${
+                      board.id === boardList.currentBoardId ? "bg-primary/10 font-medium" : ""
+                    }`}
+                  >
+                    {board.name}
+                    {board.id === boardList.currentBoardId && " (current)"}
+                  </button>
+                ))}
+                <div className="p-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const name = prompt("Board name:", "New Board");
+                      if (name) {
+                        createBoard(name);
+                        setShowBoardDropdown(false);
+                      }
+                    }}
+                    className="w-full justify-start gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Board
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         
         <div className="flex items-center gap-2">
           {/* View toggle */}

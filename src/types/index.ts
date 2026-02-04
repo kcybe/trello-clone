@@ -72,5 +72,13 @@ export type Column = {
 };
 
 export type Board = {
+  id: string;
+  name: string;
   columns: Column[];
+  createdAt: number;
+};
+
+export type BoardList = {
+  boards: Board[];
+  currentBoardId: string | null;
 };
