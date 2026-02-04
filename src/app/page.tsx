@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock, Upload, FileJson, AlertCircle } from "lucide-react";
 import ActivityPanel from "@/components/ActivityPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { SearchBar } from "@/components/board/search-bar";
+import { FilterPanel } from "@/components/board/filter-panel";
 import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType } from "@/types";
+import type { FilterState } from "@/components/board/filter-panel";
+import { importBoardFromJSON, validateBoardImport, downloadBoardAsJSON, BoardExportData } from "@/lib/export";
 
 const STORAGE_KEY = "trello-clone-board";
 
@@ -100,6 +105,28 @@ function getCardsByDate(boardData: Board | null): Record<string, CardType[]> {
 
 function getNoDateCards(boardData: Board | null): CardType[] {
   return getAllCards(boardData).filter(card => !card.dueDate);
+}
+
+function getAvailableLabels(boardData: Board | null): string[] {
+  if (!boardData) return [];
+  const labels = new Set<string>();
+  boardData.columns.forEach(col => {
+    col.cards.forEach(card => {
+      card.labels?.forEach(label => labels.add(label.text));
+    });
+  });
+  return Array.from(labels);
+}
+
+function getAvailableMembers(boardData: Board | null): string[] {
+  if (!boardData) return [];
+  const members = new Set<string>();
+  boardData.columns.forEach(col => {
+    col.cards.forEach(card => {
+      if (card.assignee) members.add(card.assignee);
+    });
+  });
+  return Array.from(members);
 }
 
 // Calendar View Component
@@ -264,8 +291,11 @@ export default function Home() {
   const [view, setView] = useState<"board" | "calendar">("board");
   const [sortBy, setSortBy] = useState<"manual" | "date" | "title">("manual");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [filterLabel, setFilterLabel] = useState<string>("");
-  const [filterMember, setFilterMember] = useState<string>("");
+  const [filterState, setFilterState] = useState<FilterState>({
+    labels: [],
+    members: [],
+    dueDate: "all",
+  });
   const [isCompact, setIsCompact] = useState(false);
   const [moveCardOpen, setMoveCardOpen] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<{ card: CardType; columnId: string; index: number } | null>(null);
@@ -317,6 +347,13 @@ export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showActivity, setShowActivity] = useState(false);
   const ACTIVITIES_STORAGE_KEY = "trello-clone-activities";
+
+  // Import Board state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<BoardExportData | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Load activities from localStorage
   useEffect(() => {
@@ -604,6 +641,36 @@ export default function Home() {
     
     let result = board;
     
+    // Helper functions for date filtering
+    const isOverdue = (date: Date | null | undefined) => {
+      if (!date) return false;
+      const due = new Date(date);
+      const now = new Date();
+      due.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      return due < now;
+    };
+    
+    const isToday = (date: Date | null | undefined) => {
+      if (!date) return false;
+      const due = new Date(date);
+      const now = new Date();
+      due.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      return due.getTime() === now.getTime();
+    };
+    
+    const isThisWeek = (date: Date | null | undefined) => {
+      if (!date) return false;
+      const due = new Date(date);
+      const now = new Date();
+      const weekFromNow = new Date(now);
+      weekFromNow.setDate(now.getDate() + 7);
+      due.setHours(0, 0, 0, 0);
+      weekFromNow.setHours(0, 0, 0, 0);
+      return due >= now && due <= weekFromNow;
+    };
+    
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -614,34 +681,58 @@ export default function Home() {
           cards: col.cards.filter(card => 
             card.title.toLowerCase().includes(query) ||
             card.description?.toLowerCase().includes(query) ||
-            card.labels?.some(l => l.text.toLowerCase().includes(query))
+            card.labels?.some(l => l.text.toLowerCase().includes(query)) ||
+            card.assignee?.toLowerCase().includes(query)
           )
         }))
       };
     }
     
-    // Apply label filter
-    if (filterLabel) {
+    // Apply label filter (multiple)
+    if (filterState.labels.length > 0) {
       result = {
         ...result,
         columns: result.columns.map(col => ({
           ...col,
           cards: col.cards.filter(card => 
-            card.labels?.some(l => l.text === filterLabel)
+            card.labels?.some(l => filterState.labels.includes(l.text))
           )
         }))
       };
     }
     
-    // Apply member filter
-    if (filterMember) {
+    // Apply member filter (multiple)
+    if (filterState.members.length > 0) {
       result = {
         ...result,
         columns: result.columns.map(col => ({
           ...col,
           cards: col.cards.filter(card => 
-            card.assignee === filterMember
+            card.assignee && filterState.members.includes(card.assignee)
           )
+        }))
+      };
+    }
+    
+    // Apply due date filter
+    if (filterState.dueDate !== "all") {
+      result = {
+        ...result,
+        columns: result.columns.map(col => ({
+          ...col,
+          cards: col.cards.filter(card => {
+            if (!card.dueDate) return false;
+            switch (filterState.dueDate) {
+              case "overdue":
+                return isOverdue(card.dueDate);
+              case "today":
+                return isToday(card.dueDate);
+              case "thisWeek":
+                return isThisWeek(card.dueDate);
+              default:
+                return true;
+            }
+          })
         }))
       };
     }
@@ -668,7 +759,7 @@ export default function Home() {
     }
     
     return result;
-  }, [board, searchQuery, sortBy, sortOrder, filterLabel, filterMember]);
+  }, [board, searchQuery, filterState, sortBy, sortOrder]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -968,6 +1059,87 @@ export default function Home() {
     a.download = `trello-clone-board-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Handle file selection for import
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.name.endsWith(".json")) {
+      setImportError("Please select a JSON file");
+      return;
+    }
+
+    setImportFile(file);
+    setImportError(null);
+
+    // Validate and preview
+    const validation = await validateBoardImport(file);
+    if (!validation.valid) {
+      setImportError(validation.error || "Invalid file");
+      setImportPreview(null);
+      return;
+    }
+
+    // Read and parse file for preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        setImportPreview(parsed);
+        setImportError(null);
+      } catch {
+        setImportError("Failed to parse file");
+        setImportPreview(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Perform the import
+  const handleImportBoard = () => {
+    if (!importFile) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const jsonData = event.target?.result as string;
+      const result = importBoardFromJSON(jsonData);
+
+      if (result.success && result.board) {
+        // Generate a unique name for the imported board
+        const importedBoard = {
+          ...result.board,
+          title: `Imported Board`,
+          description: `Imported from ${importFile.name} on ${new Date().toLocaleDateString()}`,
+        };
+
+        pushToHistory(importedBoard);
+        setImportDialogOpen(false);
+        setImportFile(null);
+        setImportPreview(null);
+        setImportError(null);
+        setIsImporting(false);
+      } else {
+        setImportError(result.error || "Import failed");
+        setIsImporting(false);
+      }
+    };
+    reader.onerror = () => {
+      setImportError("Failed to read file");
+      setIsImporting(false);
+    };
+    reader.readAsText(importFile);
+  };
+
+  // Reset import state
+  const resetImport = () => {
+    setImportFile(null);
+    setImportPreview(null);
+    setImportError(null);
+    setIsImporting(false);
   };
 
   const updateCard = () => {
@@ -1352,58 +1524,61 @@ export default function Home() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-1">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={filterLabel}
-              onChange={(e) => setFilterLabel(e.target.value)}
-              className="bg-transparent text-sm border rounded px-2 py-1"
-            >
-              <option value="">All Labels</option>
-              {LABEL_COLORS.map(label => (
-                <option key={label.name} value={label.name}>{label.name}</option>
-              ))}
-            </select>
-            <select
-              value={filterMember}
-              onChange={(e) => setFilterMember(e.target.value)}
-              className="bg-transparent text-sm border rounded px-2 py-1"
-            >
-              <option value="">All Members</option>
-              {MEMBER_SUGGESTIONS.map(member => (
-                <option key={member} value={member}>{member}</option>
-              ))}
-            </select>
-            {(filterLabel || filterMember) && (
-              <button
-                onClick={() => { setFilterLabel(""); setFilterMember(""); }}
-                className="p-1 hover:bg-muted rounded"
-                title="Clear filters"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+          <FilterPanel
+            labels={getAvailableLabels(board)}
+            members={getAvailableMembers(board)}
+            filters={filterState}
+            onFiltersChange={setFilterState}
+            onClearAll={() => setFilterState({ labels: [], members: [], dueDate: "all" })}
+          />
 
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search-input"
-              placeholder="Search cards..."
-              className="pl-8 w-48"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2"
-              >
-                <X className="h-4 w-4 text-muted-foreground" />
-              </button>
-            )}
-          </div>
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onClear={() => setSearchQuery("")}
+            placeholder="Search cards..."
+          />
+          
+          {/* Active filter chips */}
+          {(filterState.labels.length > 0 || filterState.members.length > 0 || filterState.dueDate !== "all") && (
+            <div className="flex items-center gap-1">
+              {filterState.labels.map(label => (
+                <Badge key={label} variant="secondary" className="text-xs">
+                  {label}
+                  <button
+                    onClick={() => setFilterState({ ...filterState, labels: filterState.labels.filter(l => l !== label) })}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              {filterState.members.map(member => (
+                <Badge key={member} variant="secondary" className="text-xs">
+                  {member}
+                  <button
+                    onClick={() => setFilterState({ ...filterState, members: filterState.members.filter(m => m !== member) })}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              {filterState.dueDate !== "all" && (
+                <Badge variant="secondary" className="text-xs">
+                  {filterState.dueDate === "overdue" ? "Overdue" : 
+                   filterState.dueDate === "today" ? "Today" : "This Week"}
+                  <button
+                    onClick={() => setFilterState({ ...filterState, dueDate: "all" })}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+            </div>
+          )}
           
           {/* Shortcuts help */}
           <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)">
@@ -1500,6 +1675,16 @@ export default function Home() {
           {/* Export button */}
           <Button variant="ghost" size="icon" onClick={exportBoard} title="Export board (JSON)">
             <Download className="h-5 w-5" />
+          </Button>
+
+          {/* Import button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setImportDialogOpen(true)} 
+            title="Import board"
+          >
+            <Upload className="h-5 w-5" />
           </Button>
           
           {/* Activity Log toggle */}
@@ -2385,6 +2570,91 @@ export default function Home() {
           onClose={() => setShowActivity(false)} 
         />
       )}
+
+      {/* Import Board Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+        setImportDialogOpen(open);
+        if (!open) resetImport();
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              Import Board
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {!importFile ? (
+              // File upload area
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload a JSON file exported from Trello Clone
+                </p>
+                <label className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>Choose File</span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+              </div>
+            ) : (
+              // Preview and confirm
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <FileJson className="h-8 w-8 text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{importFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(importFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={resetImport}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {importError && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <p className="text-sm">{importError}</p>
+                  </div>
+                )}
+
+                {importPreview && !importError && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-2">Board Preview:</p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Version: {importPreview.version}</p>
+                      <p>Columns: {importPreview.board.columns.length}</p>
+                      <p>Cards: {importPreview.board.columns.reduce((acc, col) => acc + col.cards.length, 0)}</p>
+                      <p>Exported: {new Date(importPreview.exportedAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={resetImport} disabled={isImporting}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleImportBoard} 
+                    disabled={!!importError || isImporting || !importPreview}
+                  >
+                    {isImporting ? "Importing..." : "Import Board"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
