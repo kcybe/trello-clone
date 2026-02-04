@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem } from "@/types";
+import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment } from "@/types";
 
 const STORAGE_KEY = "trello-clone-board";
 
@@ -52,7 +52,8 @@ const initialBoard: Board = {
           assignee: "Demo User",
           attachments: [{ id: "a1", name: "Readme.md", url: "#", type: "document" }],
           checklists: [{ id: "cl1", title: "Getting Started", items: [{ id: "i1", text: "Try dragging cards", checked: true }, { id: "i2", text: "Add new members", checked: false }, { id: "i3", text: "Attach files", checked: false }] }],
-          dueDate: new Date(Date.now() + 86400000 * 2)
+          dueDate: new Date(Date.now() + 86400000 * 2),
+          comments: [],
         },
       ],
     },
@@ -90,6 +91,7 @@ export default function Home() {
     checklists: Checklist[];
     dueDate: string;
     columnId: string;
+    comments: Comment[];
   } | null>(null);
 
   // New label input
@@ -107,6 +109,10 @@ export default function Home() {
   // Checklist inputs
   const [newChecklistTitle, setNewChecklistTitle] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
+
+  // Comment inputs
+  const [newCommentAuthor, setNewCommentAuthor] = useState("");
+  const [newCommentText, setNewCommentText] = useState("");
 
   // Load dark mode preference
   useEffect(() => {
@@ -138,6 +144,7 @@ export default function Home() {
             if (!card.assignee) card.assignee = undefined;
             if (!card.attachments) card.attachments = [];
             if (!card.checklists) card.checklists = [];
+            if (!card.comments) card.comments = [];
           });
         });
         setBoard(parsed);
@@ -261,6 +268,7 @@ export default function Home() {
       attachments: [],
       checklists: [],
       dueDate: null,
+      comments: [],
     };
 
     setBoard({
@@ -332,7 +340,8 @@ export default function Home() {
                       assignee: editingCard.assignee || undefined,
                       attachments: editingCard.attachments,
                       checklists: editingCard.checklists,
-                      dueDate: editingCard.dueDate ? new Date(editingCard.dueDate) : null
+                      dueDate: editingCard.dueDate ? new Date(editingCard.dueDate) : null,
+                      comments: editingCard.comments
                     }
                   : card
               ),
@@ -342,6 +351,30 @@ export default function Home() {
     });
 
     setEditingCard(null);
+  };
+
+  // Comment functions
+  const addComment = () => {
+    if (!newCommentText.trim() || !newCommentAuthor.trim() || !editingCard) return;
+    const newComment: Comment = {
+      id: `comment-${Date.now()}`,
+      author: newCommentAuthor.trim(),
+      text: newCommentText.trim(),
+      createdAt: new Date(),
+    };
+    setEditingCard({
+      ...editingCard,
+      comments: [...(editingCard.comments || []), newComment],
+    });
+    setNewCommentText("");
+  };
+
+  const deleteComment = (commentId: string) => {
+    if (!editingCard) return;
+    setEditingCard({
+      ...editingCard,
+      comments: editingCard.comments.filter(c => c.id !== commentId),
+    });
   };
 
   const addLabel = () => {
@@ -484,6 +517,7 @@ export default function Home() {
       checklists: card.checklists || [],
       dueDate: card.dueDate ? new Date(card.dueDate).toISOString().split("T")[0] : "",
       columnId,
+      comments: card.comments || [],
     });
   };
 
@@ -697,6 +731,14 @@ export default function Home() {
                                 }`}>
                                   <Calendar className="h-3 w-3" />
                                   <span>{new Date(card.dueDate).toLocaleDateString()}</span>
+                                </div>
+                              )}
+
+                              {/* Comment count */}
+                              {card.comments && card.comments.length > 0 && (
+                                <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                                  <MessageCircle className="h-3 w-3" />
+                                  <span>{card.comments.length}</span>
                                 </div>
                               )}
                             </CardContent>
@@ -1071,6 +1113,135 @@ export default function Home() {
                     Add Checklist
                   </Button>
                 </div>
+              </div>
+
+              {/* Comments */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Comments ({editingCard.comments?.length || 0})
+                </label>
+                
+                {/* Comment list */}
+                {editingCard.comments && editingCard.comments.length > 0 && (
+                  <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
+                    {editingCard.comments.map((comment) => (
+                      <div key={comment.id} className="bg-muted rounded-md p-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium">{comment.author}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={() => deleteComment(comment.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-sm">{comment.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add comment */}
+                <div className="space-y-2 mt-2">
+                  <Input
+                    placeholder="Your name..."
+                    value={newCommentAuthor}
+                    onChange={(e) => setNewCommentAuthor(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newCommentAuthor.trim() && newCommentText.trim()) {
+                        e.preventDefault();
+                        addComment();
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Write a comment..."
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newCommentAuthor.trim() && newCommentText.trim()) {
+                          e.preventDefault();
+                          addComment();
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={addComment}
+                      disabled={!newCommentAuthor.trim() || !newCommentText.trim()}
+                    >
+                      Post
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comments */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Comments ({editingCard.comments?.length || 0})
+                </label>
+                {editingCard.comments && editingCard.comments.length > 0 && (
+                  <div className="space-y-2 mt-2 max-h-40 overflow-y-auto">
+                    {editingCard.comments.map((comment) => (
+                      <div key={comment.id} className="bg-muted rounded-md p-2 text-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium">{comment.author}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4"
+                            onClick={() => deleteComment(comment.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="text-muted-foreground">{comment.text}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <Input
+                    placeholder="Your name..."
+                    value={newCommentAuthor}
+                    onChange={(e) => setNewCommentAuthor(e.target.value)}
+                    className="col-span-1 h-8"
+                  />
+                  <Input
+                    placeholder="Add comment..."
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newCommentText.trim() && newCommentAuthor.trim()) {
+                        addComment();
+                      }
+                    }}
+                    className="col-span-2 h-8"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={addComment}
+                  disabled={!newCommentText.trim() || !newCommentAuthor.trim()}
+                >
+                  Add Comment
+                </Button>
               </div>
 
               {/* Due date */}
