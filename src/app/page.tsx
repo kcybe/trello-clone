@@ -26,20 +26,43 @@ const DEFAULT_COLUMNS: Column[] = [
   { id: "done", title: "Done", cards: [] },
 ];
 
+// Create columns from template names
+const createColumnsFromTemplate = (columnNames: string[]): Column[] => {
+  return columnNames.map((title, index) => ({
+    id: `col-${Date.now()}-${index}`,
+    title,
+    cards: []
+  }));
+};
+
 // Initial board
-const createInitialBoard = (name: string = "My Board"): Board => ({
+const createInitialBoard = (name: string = "My Board", templateColumns?: string[]): Board => ({
   id: `board-${Date.now()}`,
   name,
-  columns: DEFAULT_COLUMNS,
+  columns: templateColumns ? createColumnsFromTemplate(templateColumns) : DEFAULT_COLUMNS,
   createdAt: Date.now(),
 });
 
-// Board templates
-const BOARD_TEMPLATES: { name: string; columns: string[] }[] = [
-  { name: "Kanban", columns: ["To Do", "In Progress", "Done"] },
-  { name: "Scrum", columns: ["Backlog", "Sprint", "In Progress", "Testing", "Done"] },
-  { name: "Basic", columns: ["To Do", "Doing", "Done"] },
-  { name: "Project", columns: ["Ideas", "Planning", "In Progress", "Review", "Complete"] },
+// Board templates with pre-configured columns
+const BOARD_TEMPLATES = [
+  {
+    id: "kanban",
+    name: "Basic Kanban",
+    description: "Classic 3-column workflow",
+    columns: ["To Do", "In Progress", "Done"]
+  },
+  {
+    id: "scrum",
+    name: "Scrum Sprint",
+    description: "Agile sprint workflow with testing",
+    columns: ["Backlog", "Sprint", "Testing", "Done"]
+  },
+  {
+    id: "bug-tracking",
+    name: "Bug Tracking",
+    description: "Track bugs through triage and verification",
+    columns: ["New", "Triage", "In Progress", "Fixed", "Verified"]
+  }
 ];
 
 // Label colors
@@ -275,8 +298,8 @@ export default function Home() {
   };
   
   // Board CRUD operations
-  const createBoard = (name: string) => {
-    const newBoard = createInitialBoard(name);
+  const createBoard = (name: string, templateColumns?: string[]) => {
+    const newBoard = createInitialBoard(name, templateColumns);
     const newList: BoardList = {
       boards: [...boardList.boards, newBoard],
       currentBoardId: newBoard.id,
@@ -512,10 +535,10 @@ export default function Home() {
 
   // Check due dates and send notifications
   const checkDueDates = useCallback(() => {
-    if (!board || !notificationsEnabled) return;
+    if (!currentBoard || !notificationsEnabled) return;
 
     const now = new Date();
-    const cards = board.columns.flatMap(col => col.cards).filter(card => card.dueDate);
+    const cards = currentBoard.columns.flatMap(col => col.cards).filter(card => card.dueDate);
 
     const notifications: { title: string; body: string; tag: string }[] = [];
 
@@ -567,14 +590,14 @@ export default function Home() {
     });
 
     setLastNotificationCheck(now);
-  }, [board, notificationsEnabled, reminder1Day, reminder1Hour, overdueAlerts]);
+  }, [currentBoard, notificationsEnabled, reminder1Day, reminder1Hour, overdueAlerts]);
 
   // Run checkDueDates on mount and periodically
   useEffect(() => {
     if (notificationsEnabled) {
       checkDueDates();
     }
-  }, [notificationsEnabled, board]);
+  }, [notificationsEnabled, currentBoard]);
 
   // Check every minute for due date alerts
   useEffect(() => {
@@ -691,7 +714,7 @@ export default function Home() {
       if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         // Open first add card dialog
-        setIsAddCardOpen(board?.columns[0]?.id || null);
+        setIsAddCardOpen(currentBoard?.columns[0]?.id || null);
       }
       if (e.key === "f" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
@@ -721,7 +744,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [board, boardHistory, historyIndex]);
+  }, [currentBoard, boardHistory, historyIndex]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -798,25 +821,25 @@ export default function Home() {
   };
 
   const deleteCard = (columnId: string, cardId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.cards.find(c => c.id === cardId);
     if (!card) return;
 
     // Archive the card instead of permanent delete
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId
           ? {
               ...col,
-              cards: col.cards.filter((card) => card.id !== cardId),
+              cards: col.cards.filter((c) => c.id !== cardId),
               archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
             }
           : col
-      ),
-    });
+      )
+    }));
   };
 
   const archiveCard = (columnId: string, cardId: string) => {
@@ -874,19 +897,19 @@ export default function Home() {
   };
 
   const permanentlyDeleteCard = (columnId: string, cardId: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
 
-    const column = board.columns.find(col => col.id === columnId);
+    const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.archivedCards?.find(c => c.id === cardId);
 
-    pushToHistory({
+    updateCurrentBoard(board => ({
       ...board,
-      columns: board.columns.map((col) =>
+      columns: board.columns.map(col =>
         col.id === columnId
           ? { ...col, archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [] }
           : col
-      ),
-    });
+      )
+    }));
 
     // Track activity
     if (card) {
@@ -1279,11 +1302,11 @@ export default function Home() {
   };
 
   const navigateCards = (key: string) => {
-    if (!board) return;
+    if (!currentBoard) return;
     
     // Flatten all cards with their column info
     const allCards: { card: CardType; columnId: string; index: number }[] = [];
-    board.columns.forEach(col => {
+    currentBoard.columns.forEach(col => {
       col.cards.forEach((card, idx) => {
         allCards.push({ card, columnId: col.id, index: idx });
       });
@@ -1332,7 +1355,7 @@ export default function Home() {
     return due < now;
   };
 
-  if (!isLoaded || !filteredBoard) {
+  if (!isLoaded || !currentBoard) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -1375,21 +1398,72 @@ export default function Home() {
                   </button>
                 ))}
                 <div className="p-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const name = prompt("Board name:", "New Board");
-                      if (name) {
-                        createBoard(name);
-                        setShowBoardDropdown(false);
-                      }
-                    }}
-                    className="w-full justify-start gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Board
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Board
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create New Board</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Board Name</label>
+                          <Input
+                            id="new-board-name"
+                            placeholder="My Board"
+                            defaultValue="New Board"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Choose a Template</label>
+                          <div className="grid grid-cols-1 gap-2">
+                            {BOARD_TEMPLATES.map((template) => (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => {
+                                  const nameInput = document.getElementById("new-board-name") as HTMLInputElement;
+                                  const name = nameInput?.value || "New Board";
+                                  createBoard(name, template.columns);
+                                  setShowBoardDropdown(false);
+                                }}
+                                className="text-left p-3 border rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <div className="font-medium">{template.name}</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {template.columns.join(" • ")}
+                                </div>
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nameInput = document.getElementById("new-board-name") as HTMLInputElement;
+                                const name = nameInput?.value || "New Board";
+                                createBoard(name);
+                                setShowBoardDropdown(false);
+                              }}
+                              className="text-left p-3 border rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <div className="font-medium">Blank Board</div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Start with empty columns
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             )}
@@ -1650,7 +1724,7 @@ export default function Home() {
       {/* Board */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex gap-4 overflow-x-auto p-4 h-[calc(100vh-80px)]">
-          {filteredBoard.columns.map((column) => (
+          {currentBoard.columns.map((column) => (
             <div
               key={column.id}
               className="flex-shrink-0 w-72 bg-muted/50 dark:bg-muted/20 rounded-lg p-2"
@@ -1767,10 +1841,10 @@ export default function Home() {
                                       >
                                         <ArrowRight className="h-3 w-3" />
                                       </Button>
-                                      {moveCardOpen === card.id && board && (
+                                      {moveCardOpen === card.id && currentBoard && (
                                         <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-10 min-w-32">
                                           <div className="text-xs text-muted-foreground px-2 py-1">Move to:</div>
-                                          {board.columns.filter(col => col.id !== column.id).map(col => (
+                                          {currentBoard.columns.filter(col => col.id !== column.id).map(col => (
                                             <button
                                               key={col.id}
                                               onClick={() => moveCard(card.id, column.id, col.id)}
@@ -1969,16 +2043,16 @@ export default function Home() {
       <div className="px-4 py-2 border-t bg-muted/30 flex items-center gap-6 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Cards:</span>
-          <span className="font-medium">{filteredBoard.columns.reduce((acc, col) => acc + col.cards.length, 0)}</span>
+          <span className="font-medium">{currentBoard.columns.reduce((acc, col) => acc + col.cards.length, 0)}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Columns:</span>
-          <span className="font-medium">{filteredBoard.columns.length}</span>
+          <span className="font-medium">{currentBoard.columns.length}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Overdue:</span>
           <span className="font-medium text-red-500">
-            {filteredBoard.columns.reduce((acc, col) => 
+            {currentBoard.columns.reduce((acc, col) => 
               acc + col.cards.filter(c => c.dueDate && isOverdue(c.dueDate)).length, 0
             )}
           </span>
@@ -1986,7 +2060,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Completed:</span>
           <span className="font-medium text-green-500">
-            {filteredBoard.columns.reduce((acc, col) => 
+            {currentBoard.columns.reduce((acc, col) => 
               acc + col.cards.filter(c => {
                 const now = new Date();
                 if (!c.dueDate) return false;
@@ -2002,7 +2076,7 @@ export default function Home() {
 
       {/* Calendar View */}
       {view === "calendar" && (
-        <CalendarView board={filteredBoard} onEditCard={openEditCard} />
+        <CalendarView board={currentBoard} onEditCard={openEditCard} />
       )}
 
       {/* Edit card dialog */}
