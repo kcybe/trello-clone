@@ -629,6 +629,7 @@ export default function Home() {
         onExportBoard={exportBoard}
         onToggleActivity={() => setShowActivity(!showActivity)}
         onShowShortcuts={() => setShowShortcuts(true)}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
         onSignIn={() => {}}
         onSignOut={() => setUser(null)}
         onUndo={undo}

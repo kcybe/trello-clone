@@ -197,6 +197,8 @@ export interface BoardHeaderProps {
   onExportBoard: () => void;
   onToggleActivity: () => void;
   onShowShortcuts: () => void;
+  onOpenTemplates?: () => void;
+  onOpenShare?: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
   onUndo: () => void;

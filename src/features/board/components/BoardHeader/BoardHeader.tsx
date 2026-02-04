@@ -9,6 +9,7 @@ import {
   Sun,
   Keyboard,
   Layout,
+  LayoutTemplate,
   Grid,
   RotateCcw,
   ArrowUpDown,
@@ -18,6 +19,7 @@ import {
   BellOff,
   LogIn,
   LogOut,
+  Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { BoardHeaderProps } from '../types';
+import { LayoutTemplate, Plus } from 'lucide-react';
 import { BOARD_TEMPLATES } from '../hooks/useBoard';
 
 export function BoardHeader({
@@ -120,7 +123,22 @@ export function BoardHeader({
                   {board.id === boardList.currentBoardId && ' (current)'}
                 </button>
               ))}
-              <div className="p-2 border-t">
+              <div className="p-2 border-t space-y-1">
+                {/* Templates button */}
+                {onOpenTemplates && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      setShowBoardDropdown(false);
+                      onOpenTemplates();
+                    }}
+                  >
+                    <LayoutTemplate className="h-4 w-4" />
+                    Browse Templates
+                  </Button>
+                )}
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
