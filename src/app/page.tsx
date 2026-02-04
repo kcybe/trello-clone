@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -220,6 +220,39 @@ function CalendarView({ board, onEditCard }: { board: Board; onEditCard: (card: 
 
 export default function Home() {
   const [board, setBoard] = useState<Board | null>(null);
+  const [boardHistory, setBoardHistory] = useState<(Board | null)[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const MAX_HISTORY = 50;
+  
+  // Helper to push to history
+  const pushToHistory = (newBoard: Board | null) => {
+    const newHistory = boardHistory.slice(0, historyIndex + 1);
+    newHistory.push(newBoard);
+    if (newHistory.length > MAX_HISTORY) {
+      newHistory.shift();
+    }
+    setBoardHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    setBoard(newBoard);
+  };
+  
+  // Undo function
+  const undo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setBoard(boardHistory[newIndex]);
+    }
+  };
+  
+  // Redo function
+  const redo = () => {
+    if (historyIndex < boardHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setBoard(boardHistory[newIndex]);
+    }
+  };
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -325,6 +358,20 @@ export default function Home() {
         return;
       }
 
+      // Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      
+      // Redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
       if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         // Open first add card dialog
@@ -345,7 +392,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [board]);
+  }, [board, boardHistory, historyIndex]);
 
   // Filter cards based on search
   const filteredBoard = useMemo(() => {
@@ -380,7 +427,7 @@ export default function Home() {
       const [removed] = newCards.splice(source.index, 1);
       newCards.splice(destination.index, 0, removed);
 
-      setBoard({
+      pushToHistory({
         ...board,
         columns: board.columns.map((col) =>
           col.id === source.droppableId ? { ...col, cards: newCards } : col
@@ -392,7 +439,7 @@ export default function Home() {
       const [removed] = sourceCards.splice(source.index, 1);
       destCards.splice(destination.index, 0, removed);
 
-      setBoard({
+      pushToHistory({
         ...board,
         columns: board.columns.map((col) =>
           col.id === source.droppableId
@@ -420,7 +467,7 @@ export default function Home() {
       comments: [],
     };
 
-    setBoard({
+    pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
         col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
@@ -434,7 +481,7 @@ export default function Home() {
   const deleteCard = (columnId: string, cardId: string) => {
     if (!board) return;
 
-    setBoard({
+    pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
         col.id === columnId
@@ -453,7 +500,7 @@ export default function Home() {
       cards: [],
     };
 
-    setBoard({
+    pushToHistory({
       ...board,
       columns: [...board.columns, newColumn],
     });
@@ -464,7 +511,7 @@ export default function Home() {
   const deleteColumn = (columnId: string) => {
     if (!board) return;
 
-    setBoard({
+    pushToHistory({
       ...board,
       columns: board.columns.filter((col) => col.id !== columnId),
     });
@@ -473,7 +520,7 @@ export default function Home() {
   const updateCard = () => {
     if (!editingCard || !board) return;
 
-    setBoard({
+    pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
         col.id === editingCard.columnId
@@ -709,6 +756,28 @@ export default function Home() {
             >
               <Grid className="h-4 w-4" />
               Calendar
+            </Button>
+          </div>
+
+          {/* Undo/Redo */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={undo}
+              disabled={historyIndex <= 0}
+              title="Undo (Ctrl+Z)"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={redo}
+              disabled={historyIndex >= boardHistory.length - 1}
+              title="Redo (Ctrl+Y)"
+            >
+              <RotateCcw className="h-4 w-4 -rotate-180" />
             </Button>
           </div>
 
