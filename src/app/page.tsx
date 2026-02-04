@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2 } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -266,6 +266,7 @@ export default function Home() {
   const [filterLabel, setFilterLabel] = useState<string>("");
   const [filterMember, setFilterMember] = useState<string>("");
   const [isCompact, setIsCompact] = useState(false);
+  const [moveCardOpen, setMoveCardOpen] = useState<string | null>(null);
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
@@ -638,6 +639,29 @@ export default function Home() {
           : col
       ),
     });
+  };
+
+  const moveCard = (cardId: string, fromColumnId: string, toColumnId: string) => {
+    if (!board || fromColumnId === toColumnId) return;
+
+    const fromColumn = board.columns.find(col => col.id === fromColumnId);
+    const card = fromColumn?.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    pushToHistory({
+      ...board,
+      columns: board.columns.map((col) => {
+        if (col.id === fromColumnId) {
+          return { ...col, cards: col.cards.filter(c => c.id !== cardId) };
+        }
+        if (col.id === toColumnId) {
+          return { ...col, cards: [...col.cards, card] };
+        }
+        return col;
+      }),
+    });
+    
+    setMoveCardOpen(null);
   };
 
   const addColumn = () => {
@@ -1137,6 +1161,33 @@ export default function Home() {
                                   >
                                     <Copy className="h-3 w-3" />
                                   </Button>
+                                  
+                                  {/* Move card dropdown */}
+                                  <div className="relative">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground"
+                                      onClick={() => setMoveCardOpen(moveCardOpen === card.id ? null : card.id)}
+                                      title="Move card"
+                                    >
+                                      <ArrowRight className="h-3 w-3" />
+                                    </Button>
+                                    {moveCardOpen === card.id && (
+                                      <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-10 min-w-32">
+                                        <div className="text-xs text-muted-foreground px-2 py-1">Move to:</div>
+                                        {board.columns.filter(col => col.id !== column.id).map(col => (
+                                          <button
+                                            key={col.id}
+                                            onClick={() => moveCard(card.id, column.id, col.id)}
+                                            className="w-full text-left px-2 py-1 text-sm hover:bg-muted"
+                                          >
+                                            {col.title}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
