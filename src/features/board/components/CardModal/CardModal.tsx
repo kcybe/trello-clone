@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import { LABEL_COLORS, MEMBER_SUGGESTIONS } from '../../hooks/useCards';
@@ -67,7 +67,61 @@ export function CardModal({
   setColor,
   setDueDate,
   getChecklistProgress,
+  onAddUploadedAttachment,
 }: CardModalProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !editingCard) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('cardId', editingCard.id);
+
+      const response = await fetch('/api/attachments/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const attachment = await response.json();
+
+      // Add the uploaded attachment to the card
+      const newAttachment: CardAttachment = {
+        id: attachment.id,
+        name: attachment.filename,
+        url: attachment.url,
+        type: attachment.mimeType,
+      };
+
+      if (onAddUploadedAttachment) {
+        onAddUploadedAttachment(newAttachment);
+      }
+
+      setSelectedFile(null);
+      // Reset file input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (!editingCard) return null;
 
   return (
@@ -304,6 +358,34 @@ export function CardModal({
                 <Link2 className="h-4 w-4 mr-2" />
                 Add Attachment
               </Button>
+            </div>
+
+            {/* File Upload */}
+            <div className="border-t pt-4 mt-4">
+              <label className="text-sm font-medium flex items-center gap-2 mb-2">
+                <Paperclip className="h-4 w-4" />
+                Upload File
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="file-upload"
+                  type="file"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleFileUpload}
+                  disabled={!selectedFile || isUploading}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
             </div>
           </div>
 

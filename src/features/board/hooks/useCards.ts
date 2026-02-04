@@ -76,6 +76,7 @@ interface UseCardsReturn {
   removeAttachment: (attachmentId: string) => void;
   setNewAttachmentUrl: (url: string) => void;
   setNewAttachmentName: (name: string) => void;
+  addUploadedAttachment: (attachment: CardAttachment) => void;
 
   // Checklist actions
   addChecklist: () => void;
@@ -211,6 +212,17 @@ export function useCards(): UseCardsReturn {
         : null
     );
   }, []);
+
+  const addUploadedAttachment = useCallback(
+    (attachment: CardAttachment) => {
+      if (!editingCard) return;
+      setEditingCard({
+        ...editingCard,
+        attachments: [...(editingCard.attachments || []), attachment],
+      });
+    },
+    [editingCard]
+  );
 
   // Checklist actions
   const addChecklist = useCallback(() => {
@@ -367,6 +379,7 @@ export function useCards(): UseCardsReturn {
     removeAttachment,
     setNewAttachmentUrl,
     setNewAttachmentName,
+    addUploadedAttachment,
     addChecklist,
     removeChecklist,
     setNewChecklistTitle,

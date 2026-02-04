@@ -341,6 +341,7 @@ export interface CardModalProps {
   onSetNewCommentText: (text: string) => void;
   onSetColor: (color: string) => void;
   onSetDueDate: (date: string) => void;
+  onAddUploadedAttachment: (attachment: CardAttachment) => void;
   onSave: () => void;
 }
 
