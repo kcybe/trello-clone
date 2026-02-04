@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock, Eye, Edit2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import ActivityPanel from "@/components/ActivityPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -284,6 +285,9 @@ export default function Home() {
     comments: Comment[];
     color: string;
   } | null>(null);
+
+  // Description edit mode (edit/preview)
+  const [descTab, setDescTab] = useState<"edit" | "preview">("edit");
 
   // New label input
   const [newLabelText, setNewLabelText] = useState("");
@@ -1251,6 +1255,7 @@ export default function Home() {
   };
 
   const openEditCard = (card: CardType, columnId: string) => {
+    setDescTab("edit");
     setEditingCard({
       id: card.id,
       title: card.title,
@@ -1597,6 +1602,16 @@ export default function Home() {
                               
                               <div className="flex items-start justify-between gap-2">
                                 <span className={`${isCompact ? "text-xs" : "text-sm"} font-medium`}>{card.title}</span>
+                              </div>
+
+                              {/* Description preview (first 100 chars) */}
+                              {card.description && !isCompact && (
+                                <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                                  {card.description.length > 100 ? card.description.substring(0, 100) + "..." : card.description}
+                                </div>
+                              )}
+
+                              <div className="flex items-start justify-between gap-2 mt-1">
                                 {isCompact ? (
                                   <Button
                                     variant="ghost"
@@ -1901,14 +1916,51 @@ export default function Home() {
               </div>
               
               <div>
-                <label className="text-sm font-medium">Description</label>
-                <textarea
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  rows={3}
-                  value={editingCard.description}
-                  onChange={(e) => setEditingCard({ ...editingCard, description: e.target.value })}
-                  placeholder="Add a description..."
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <div className="flex bg-muted rounded-md p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setDescTab("edit")}
+                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
+                        descTab === "edit" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                      Write
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDescTab("preview")}
+                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
+                        descTab === "preview" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Eye className="h-3 w-3" />
+                      Preview
+                    </button>
+                  </div>
+                </div>
+                {descTab === "edit" ? (
+                  <textarea
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    rows={6}
+                    value={editingCard.description}
+                    onChange={(e) => setEditingCard({ ...editingCard, description: e.target.value })}
+                    placeholder="Add a description... (Markdown supported)"
+                  />
+                ) : (
+                  <div className="w-full rounded-md border bg-background px-3 py-2 text-sm min-h-[100px] prose prose-sm dark:prose-invert max-w-none">
+                    {editingCard.description ? (
+                      <ReactMarkdown>{editingCard.description}</ReactMarkdown>
+                    ) : (
+                      <span className="text-muted-foreground italic">No description</span>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supports Markdown: **bold**, *italic*, - lists, # headings, etc.
+                </p>
               </div>
 
               {/* Labels */}
