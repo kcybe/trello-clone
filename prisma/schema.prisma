@@ -77,8 +77,23 @@ model Board {
   members    BoardMember[]
   columns    Column[]
   activities Activity[]
+  share      BoardShare?
 
   @@index([ownerId])
+}
+
+model BoardShare {
+  id          String   @id @default(cuid())
+  boardId     String   @unique
+  shareToken  String   @unique
+  isPublic    Boolean  @default(false)
+  canEdit     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([shareToken])
 }
 
 model BoardMember {

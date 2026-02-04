@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// In-memory store for demo (in production, use database)
-const shareSettingsStore = new Map<
-  string,
-  {
-    boardId: string;
-    isPublic: boolean;
-    shareToken: string | null;
-    canEdit: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }
->();
+import { prisma } from '@/lib/prisma';
 
 function generateShareToken(): string {
   return `share_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -20,10 +9,12 @@ function generateShareToken(): string {
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = await params;
 
-  let settings = shareSettingsStore.get(boardId);
+  const shareSettings = await prisma.boardShare.findUnique({
+    where: { boardId },
+  });
 
-  if (!settings) {
-    // Return default settings
+  if (!shareSettings) {
+    // Return default settings if none exist
     return NextResponse.json({
       boardId,
       isPublic: false,
@@ -34,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   }
 
-  return NextResponse.json(settings);
+  return NextResponse.json(shareSettings);
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,19 +35,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   const shareUrl = `${baseUrl}/board/shared/${shareToken}`;
 
-  const settings = {
-    boardId,
-    isPublic: true,
-    shareToken,
-    canEdit: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  shareSettingsStore.set(boardId, settings);
+  // Upsert share settings - create if doesn't exist, update if it does
+  const shareSettings = await prisma.boardShare.upsert({
+    where: { boardId },
+    create: {
+      boardId,
+      shareToken,
+      isPublic: true,
+      canEdit: false,
+    },
+    update: {
+      shareToken,
+      isPublic: true,
+    },
+  });
 
   return NextResponse.json({
-    ...settings,
+    ...shareSettings,
     shareUrl,
   });
 }
@@ -68,27 +63,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
     const { isPublic, canEdit } = body;
 
-    let settings = shareSettingsStore.get(boardId);
+    // Check if share settings exist
+    const existingSettings = await prisma.boardShare.findUnique({
+      where: { boardId },
+    });
 
-    if (!settings) {
-      settings = {
-        boardId,
-        isPublic: false,
-        shareToken: null,
-        canEdit: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    if (!existingSettings) {
+      return NextResponse.json(
+        { error: 'Share settings not found. Generate a share link first.' },
+        { status: 404 }
+      );
     }
 
-    const updatedSettings = {
-      ...settings,
-      isPublic: isPublic ?? settings.isPublic,
-      canEdit: canEdit ?? settings.canEdit,
-      updatedAt: new Date().toISOString(),
-    };
-
-    shareSettingsStore.set(boardId, updatedSettings);
+    const updatedSettings = await prisma.boardShare.update({
+      where: { boardId },
+      data: {
+        isPublic: isPublic ?? existingSettings.isPublic,
+        canEdit: canEdit ?? existingSettings.canEdit,
+      },
+    });
 
     return NextResponse.json(updatedSettings);
   } catch {
