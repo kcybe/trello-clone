@@ -1319,6 +1319,41 @@ export default function Home() {
         </div>
       </DragDropContext>
 
+      {/* Board Statistics */}
+      <div className="px-4 py-2 border-t bg-muted/30 flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Cards:</span>
+          <span className="font-medium">{filteredBoard.columns.reduce((acc, col) => acc + col.cards.length, 0)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Columns:</span>
+          <span className="font-medium">{filteredBoard.columns.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Overdue:</span>
+          <span className="font-medium text-red-500">
+            {filteredBoard.columns.reduce((acc, col) => 
+              acc + col.cards.filter(c => c.dueDate && isOverdue(c.dueDate)).length, 0
+            )}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Completed:</span>
+          <span className="font-medium text-green-500">
+            {filteredBoard.columns.reduce((acc, col) => 
+              acc + col.cards.filter(c => {
+                const now = new Date();
+                if (!c.dueDate) return false;
+                const due = new Date(c.dueDate);
+                due.setHours(0, 0, 0, 0);
+                now.setHours(0, 0, 0, 0);
+                return due <= now;
+              }).length, 0
+            )}
+          </span>
+        </div>
+      </div>
+
       {/* Calendar View */}
       {view === "calendar" && (
         <CalendarView board={filteredBoard} onEditCard={openEditCard} />
