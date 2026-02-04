@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -261,6 +261,10 @@ export default function Home() {
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [isAddCardOpen, setIsAddCardOpen] = useState<string | null>(null);
   const [view, setView] = useState<"board" | "calendar">("board");
+  const [sortBy, setSortBy] = useState<"manual" | "date" | "title">("manual");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterLabel, setFilterLabel] = useState<string>("");
+  const [filterMember, setFilterMember] = useState<string>("");
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
@@ -394,23 +398,77 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [board, boardHistory, historyIndex]);
 
-  // Filter cards based on search
+  // Filter and sort cards
   const filteredBoard = useMemo(() => {
-    if (!board || !searchQuery.trim()) return board;
+    if (!board) return board;
     
-    const query = searchQuery.toLowerCase();
-    return {
-      ...board,
-      columns: board.columns.map(col => ({
-        ...col,
-        cards: col.cards.filter(card => 
-          card.title.toLowerCase().includes(query) ||
-          card.description?.toLowerCase().includes(query) ||
-          card.labels?.some(l => l.text.toLowerCase().includes(query))
-        )
-      }))
-    };
-  }, [board, searchQuery]);
+    let result = board;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = {
+        ...board,
+        columns: board.columns.map(col => ({
+          ...col,
+          cards: col.cards.filter(card => 
+            card.title.toLowerCase().includes(query) ||
+            card.description?.toLowerCase().includes(query) ||
+            card.labels?.some(l => l.text.toLowerCase().includes(query))
+          )
+        }))
+      };
+    }
+    
+    // Apply label filter
+    if (filterLabel) {
+      result = {
+        ...result,
+        columns: result.columns.map(col => ({
+          ...col,
+          cards: col.cards.filter(card => 
+            card.labels?.some(l => l.text === filterLabel)
+          )
+        }))
+      };
+    }
+    
+    // Apply member filter
+    if (filterMember) {
+      result = {
+        ...result,
+        columns: result.columns.map(col => ({
+          ...col,
+          cards: col.cards.filter(card => 
+            card.assignee === filterMember
+          )
+        }))
+      };
+    }
+    
+    // Apply sorting
+    if (sortBy !== "manual") {
+      result = {
+        ...result,
+        columns: result.columns.map(col => ({
+          ...col,
+          cards: [...col.cards].sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === "title") {
+              comparison = a.title.localeCompare(b.title);
+            } else if (sortBy === "date") {
+              const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+              const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+              comparison = dateA - dateB;
+            }
+            return sortOrder === "asc" ? comparison : -comparison;
+          })
+        }))
+      };
+    }
+    
+    return result;
+  }, [board, searchQuery, sortBy, sortOrder, filterLabel, filterMember]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -550,6 +608,31 @@ export default function Home() {
       columns: board.columns.map((col) =>
         col.id === columnId
           ? { ...col, archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [] }
+          : col
+      ),
+    });
+  };
+
+  const duplicateCard = (columnId: string, cardId: string) => {
+    if (!board) return;
+
+    const column = board.columns.find(col => col.id === columnId);
+    const card = column?.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const newCard: CardType = {
+      ...card,
+      id: `card-${Date.now()}`,
+      title: `${card.title} (Copy)`,
+      createdAt: new Date(),
+      comments: [],
+    };
+
+    pushToHistory({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? { ...col, cards: [...col.cards.slice(0, column.cards.findIndex(c => c.id === cardId) + 1), newCard, ...col.cards.slice(column.cards.findIndex(c => c.id === cardId) + 1)] }
           : col
       ),
     });
@@ -845,6 +928,61 @@ export default function Home() {
             </Button>
           </div>
 
+          {/* Sort */}
+          <div className="flex items-center gap-1">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "manual" | "date" | "title")}
+              className="bg-transparent text-sm border rounded px-2 py-1"
+            >
+              <option value="manual">Manual</option>
+              <option value="title">Title</option>
+              <option value="date">Due Date</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              className="p-1 hover:bg-muted rounded"
+              title={sortOrder === "asc" ? "Ascending" : "Descending"}
+            >
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-1">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={filterLabel}
+              onChange={(e) => setFilterLabel(e.target.value)}
+              className="bg-transparent text-sm border rounded px-2 py-1"
+            >
+              <option value="">All Labels</option>
+              {LABEL_COLORS.map(label => (
+                <option key={label.name} value={label.name}>{label.name}</option>
+              ))}
+            </select>
+            <select
+              value={filterMember}
+              onChange={(e) => setFilterMember(e.target.value)}
+              className="bg-transparent text-sm border rounded px-2 py-1"
+            >
+              <option value="">All Members</option>
+              {MEMBER_SUGGESTIONS.map(member => (
+                <option key={member} value={member}>{member}</option>
+              ))}
+            </select>
+            {(filterLabel || filterMember) && (
+              <button
+                onClick={() => { setFilterLabel(""); setFilterMember(""); }}
+                className="p-1 hover:bg-muted rounded"
+                title="Clear filters"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -976,6 +1114,15 @@ export default function Home() {
                                     title="Archive card"
                                   >
                                     <Archive className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground"
+                                    onClick={() => duplicateCard(column.id, card.id)}
+                                    title="Duplicate card"
+                                  >
+                                    <Copy className="h-3 w-3" />
                                   </Button>
                                 </div>
                               </div>
