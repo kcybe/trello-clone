@@ -70,6 +70,154 @@ const initialBoard: Board = {
   ],
 };
 
+// Calendar helper functions
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
+}
+
+function getAllCards(boardData: Board | null): CardType[] {
+  if (!boardData) return [];
+  return boardData.columns.flatMap(col => col.cards);
+}
+
+function getCardsByDate(boardData: Board | null): Record<string, CardType[]> {
+  const cards = getAllCards(boardData);
+  const byDate: Record<string, CardType[]> = {};
+  cards.forEach(card => {
+    if (card.dueDate) {
+      const dateKey = new Date(card.dueDate).toISOString().split("T")[0];
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(card);
+    }
+  });
+  return byDate;
+}
+
+function getNoDateCards(boardData: Board | null): CardType[] {
+  return getAllCards(boardData).filter(card => !card.dueDate);
+}
+
+// Calendar View Component
+function CalendarView({ board, onEditCard }: { board: Board; onEditCard: (card: CardType, columnId: string) => void }) {
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  
+  const days = [];
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  const cardsByDate = getCardsByDate(board);
+  const noDateCards = getNoDateCards(board);
+  
+  // Previous month button
+  const prevMonth = () => {
+    setCalendarDate(new Date(year, month - 1, 1));
+  };
+  
+  // Next month button  
+  const nextMonth = () => {
+    setCalendarDate(new Date(year, month + 1, 1));
+  };
+
+  // Empty cells for days before the first day of the month
+  for (let i = 0; i < firstDay; i++) {
+    days.push(<div key={`empty-${i}`} className="h-28 border bg-muted/20" />);
+  }
+
+  // Days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateKey = new Date(year, month, day).toISOString().split("T")[0];
+    const dayCards = cardsByDate[dateKey] || [];
+    const isToday = dateKey === new Date().toISOString().split("T")[0];
+    
+    days.push(
+      <div key={day} className={`h-28 border p-1 ${isToday ? "bg-primary/10" : ""}`}>
+        <div className={`text-sm font-medium mb-1 ${isToday ? "text-primary font-bold" : "text-muted-foreground"}`}>
+          {day}
+        </div>
+        <div className="space-y-1 overflow-y-auto max-h-20">
+          {dayCards.map(card => (
+            <button
+              key={card.id}
+              onClick={() => {
+                // Find the column this card belongs to
+                const column = board.columns.find(col => col.cards.some(c => c.id === card.id));
+                if (column) {
+                  onEditCard(card, column.id);
+                }
+              }}
+              className="w-full text-left text-xs p-1 bg-primary/10 hover:bg-primary/20 rounded truncate"
+            >
+              {card.title}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      {/* Calendar header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">
+          {calendarDate.toLocaleString("default", { month: "long", year: "numeric" })}
+        </h2>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={prevMonth}>
+            <X className="h-4 w-4 rotate-45" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={nextMonth}>
+            <X className="h-4 w-4 -rotate-45" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-px bg-border border rounded-lg overflow-hidden">
+        {/* Day headers */}
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+          <div key={day} className="bg-muted p-2 text-center text-sm font-medium">
+            {day}
+          </div>
+        ))}
+        {/* Calendar days */}
+        {days}
+      </div>
+
+      {/* No date cards */}
+      {noDateCards.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-medium mb-2 flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            No Due Date ({noDateCards.length} cards)
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {noDateCards.map(card => (
+              <button
+                key={card.id}
+                onClick={() => {
+                  const column = board.columns.find(col => col.cards.some(c => c.id === card.id));
+                  if (column) {
+                    onEditCard(card, column.id);
+                  }
+                }}
+                className="px-3 py-1 bg-primary/10 hover:bg-primary/20 rounded text-sm"
+              >
+                {card.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [board, setBoard] = useState<Board | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -542,6 +690,28 @@ export default function Home() {
         <h1 className="text-xl font-bold">Trello Clone</h1>
         
         <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex items-center bg-muted rounded-lg p-1">
+            <Button
+              variant={view === "board" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("board")}
+              className="gap-1"
+            >
+              <Layout className="h-4 w-4" />
+              Board
+            </Button>
+            <Button
+              variant={view === "calendar" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("calendar")}
+              className="gap-1"
+            >
+              <Grid className="h-4 w-4" />
+              Calendar
+            </Button>
+          </div>
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -813,6 +983,11 @@ export default function Home() {
           </div>
         </div>
       </DragDropContext>
+
+      {/* Calendar View */}
+      {view === "calendar" && (
+        <CalendarView board={filteredBoard} onEditCard={openEditCard} />
+      )}
 
       {/* Edit card dialog */}
       <Dialog open={!!editingCard} onOpenChange={(open) => !open && setEditingCard(null)}>
