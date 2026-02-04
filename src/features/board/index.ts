@@ -10,4 +10,10 @@ export { BoardFooter } from './components/BoardFooter';
 
 // Hooks
 export { useBoard, BOARD_TEMPLATES, apiBoardToLocal } from './hooks/useBoard';
-export { useCards, useActivities, LABEL_COLORS, MEMBER_SUGGESTIONS } from './hooks/useCards';
+export {
+  useCards,
+  useActivities,
+  useKeyboardShortcuts,
+  LABEL_COLORS,
+  MEMBER_SUGGESTIONS,
+} from './hooks/useCards';

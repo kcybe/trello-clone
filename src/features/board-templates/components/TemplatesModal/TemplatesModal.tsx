@@ -1,5 +1,7 @@
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import { useState } from 'react';
+
 import { TemplatesModalProps, BoardTemplate, TemplateCategory } from '../../types';
 import { TemplateCard } from './TemplateCard';
 
@@ -89,9 +91,8 @@ const CATEGORY_LABELS: Record<TemplateCategory, string> = {
 export function TemplatesModal({ open, onOpenChange, onSelectTemplate }: TemplatesModalProps) {
   const [activeCategory, setActiveCategory] = useState<TemplateCategory | 'all'>('all');
 
-  const filteredTemplates = activeCategory === 'all'
-    ? TEMPLATES
-    : TEMPLATES.filter((t) => t.category === activeCategory);
+  const filteredTemplates =
+    activeCategory === 'all' ? TEMPLATES : TEMPLATES.filter(t => t.category === activeCategory);
 
   const categories: (TemplateCategory | 'all')[] = [
     'all',
@@ -108,9 +109,9 @@ export function TemplatesModal({ open, onOpenChange, onSelectTemplate }: Templat
         <DialogHeader>
           <DialogTitle>Choose a Template</DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex gap-2 mb-4 flex-wrap">
-          {categories.map((category) => (
+          {categories.map(category => (
             <Button
               key={category}
               variant={activeCategory === category ? 'default' : 'outline'}
@@ -123,11 +124,11 @@ export function TemplatesModal({ open, onOpenChange, onSelectTemplate }: Templat
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTemplates.map((template) => (
+          {filteredTemplates.map(template => (
             <TemplateCard
               key={template.id}
               template={template}
-              onSelect={(t) => {
+              onSelect={t => {
                 onSelectTemplate(t);
                 onOpenChange(false);
               }}

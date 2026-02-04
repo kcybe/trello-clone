@@ -1,19 +1,22 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Share2, Globe, Lock, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Share2, Globe, Lock, ExternalLink } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { CopyInviteButton } from "./CopyInviteButton";
-import { ShareSettings, UpdateShareSettingsRequest } from "../types";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+import { useState, useEffect } from 'react';
+
+import { ShareSettings, UpdateShareSettingsRequest } from '../types';
+import { CopyInviteButton } from './CopyInviteButton';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -27,7 +30,7 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
+  const [inviteLink, setInviteLink] = useState('');
 
   useEffect(() => {
     if (isOpen && boardId) {
@@ -50,10 +53,10 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
       } else {
         // Create default settings if not exists
         setIsPublic(false);
-        setInviteLink("");
+        setInviteLink('');
       }
     } catch (err) {
-      setError("Failed to load share settings");
+      setError('Failed to load share settings');
     } finally {
       setIsLoading(false);
     }
@@ -64,20 +67,20 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
     setError(null);
     try {
       const response = await fetch(`/api/boards/${boardId}/share`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setShareSettings(data);
         setInviteLink(data.shareUrl);
         setIsPublic(true);
       } else {
-        setError("Failed to generate share link");
+        setError('Failed to generate share link');
       }
     } catch (err) {
-      setError("Failed to generate share link");
+      setError('Failed to generate share link');
     } finally {
       setIsLoading(false);
     }
@@ -87,21 +90,21 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
     const newIsPublic = !isPublic;
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`/api/boards/${boardId}/share`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPublic: newIsPublic }),
       });
 
       if (response.ok) {
         setIsPublic(newIsPublic);
       } else {
-        setError("Failed to update share settings");
+        setError('Failed to update share settings');
       }
     } catch (err) {
-      setError("Failed to update share settings");
+      setError('Failed to update share settings');
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +115,7 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
       try {
         await navigator.clipboard.writeText(inviteLink);
       } catch (err) {
-        console.error("Failed to copy:", err);
+        console.error('Failed to copy:', err);
       }
     }
   };
@@ -131,9 +134,7 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
         </DialogHeader>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-            {error}
-          </div>
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">{error}</div>
         )}
 
         <div className="space-y-4">
@@ -147,45 +148,32 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
               )}
               <div>
                 <Label className="text-sm font-medium">
-                  {isPublic ? "Public board" : "Private board"}
+                  {isPublic ? 'Public board' : 'Private board'}
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {isPublic
-                    ? "Anyone with the link can view this board"
-                    : "Only you can access this board"}
+                    ? 'Anyone with the link can view this board'
+                    : 'Only you can access this board'}
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleTogglePublic}
-              disabled={isLoading}
-            >
-              {isPublic ? "Make Private" : "Make Public"}
+            <Button variant="outline" size="sm" onClick={handleTogglePublic} disabled={isLoading}>
+              {isPublic ? 'Make Private' : 'Make Public'}
             </Button>
           </div>
 
           {/* Invite Link Section */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Invite Link</Label>
-            
+
             {inviteLink ? (
               <div className="flex gap-2">
-                <Input
-                  value={inviteLink}
-                  readOnly
-                  className="flex-1"
-                />
+                <Input value={inviteLink} readOnly className="flex-1" />
                 <CopyInviteButton inviteLink={inviteLink} />
               </div>
             ) : (
-              <Button
-                onClick={handleGenerateLink}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading ? "Generating..." : "Generate Invite Link"}
+              <Button onClick={handleGenerateLink} disabled={isLoading} className="w-full">
+                {isLoading ? 'Generating...' : 'Generate Invite Link'}
               </Button>
             )}
 

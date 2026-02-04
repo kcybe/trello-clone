@@ -17,13 +17,13 @@ export function BoardFooter({ currentBoard }: BoardFooterProps) {
   const totalCards = currentBoard.columns.reduce((acc, col) => acc + col.cards.length, 0);
   const totalColumns = currentBoard.columns.length;
   const overdueCards = currentBoard.columns.reduce(
-    (acc, col) => acc + col.cards.filter((c) => c.dueDate && isOverdue(c.dueDate)).length,
+    (acc, col) => acc + col.cards.filter(c => c.dueDate && isOverdue(c.dueDate)).length,
     0
   );
   const completedCards = currentBoard.columns.reduce(
     (acc, col) =>
       acc +
-      col.cards.filter((c) => {
+      col.cards.filter(c => {
         const now = new Date();
         if (!c.dueDate) return false;
         const due = new Date(c.dueDate);

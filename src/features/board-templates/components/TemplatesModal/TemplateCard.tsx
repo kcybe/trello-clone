@@ -1,6 +1,7 @@
-import { BoardTemplate } from '../../types';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+
+import { BoardTemplate } from '../../types';
 
 interface TemplateCardProps {
   template: BoardTemplate;
@@ -19,7 +20,7 @@ export function TemplateCard({ template, onSelect }: TemplateCardProps) {
       <CardContent className="pb-4">
         <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
         <div className="flex gap-1 flex-wrap">
-          {template.columns.slice(0, 4).map((column) => (
+          {template.columns.slice(0, 4).map(column => (
             <span
               key={column.id}
               className="inline-block px-2 py-1 text-xs rounded bg-secondary text-secondary-foreground"

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+
 import {
   Board,
   BoardList,
@@ -34,7 +35,11 @@ async function fetchBoards(): Promise<ApiBoard[]> {
   return fetchApi<ApiBoard[]>('/api/boards');
 }
 
-async function createBoardApi(data: { name: string; description?: string; color?: string }): Promise<ApiBoard> {
+async function createBoardApi(data: {
+  name: string;
+  description?: string;
+  color?: string;
+}): Promise<ApiBoard> {
   return fetchApi<ApiBoard>('/api/boards', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -56,7 +61,10 @@ async function deleteColumnApi(columnId: string): Promise<void> {
   await fetchApi(`/api/cards/${columnId}`, { method: 'DELETE' });
 }
 
-async function createCardApi(columnId: string, data: { title: string; description?: string }): Promise<ApiCard> {
+async function createCardApi(
+  columnId: string,
+  data: { title: string; description?: string }
+): Promise<ApiCard> {
   return fetchApi<ApiCard>('/api/cards', {
     method: 'POST',
     body: JSON.stringify({ ...data, columnId }),
@@ -74,11 +82,11 @@ export function apiBoardToLocal(apiBoard: ApiBoard): Board {
     name: apiBoard.name,
     description: apiBoard.description || undefined,
     color: apiBoard.color || undefined,
-    columns: apiBoard.columns.map((apiCol) => ({
+    columns: apiBoard.columns.map(apiCol => ({
       id: apiCol.id,
       name: apiCol.name,
       title: apiCol.name,
-      cards: apiCol.cards.map((apiCard) => ({
+      cards: apiCol.cards.map(apiCard => ({
         id: apiCard.id,
         title: apiCard.title,
         description: apiCard.description || undefined,
@@ -204,7 +212,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
   // Derived: current board
   const currentBoard = useMemo(() => {
     if (!boardList.currentBoardId) return null;
-    return boardList.boards.find((b) => b.id === boardList.currentBoardId) || null;
+    return boardList.boards.find(b => b.id === boardList.currentBoardId) || null;
   }, [boardList]);
 
   // Helper to push to history
@@ -274,7 +282,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
         console.error('Failed to delete board via API:', error);
       }
 
-      const newBoards = boardList.boards.filter((b) => b.id !== boardId);
+      const newBoards = boardList.boards.filter(b => b.id !== boardId);
       let newCurrentId = boardList.currentBoardId;
       if (boardId === boardList.currentBoardId) {
         newCurrentId = newBoards[0]?.id || null;
@@ -290,7 +298,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
 
   const duplicateBoard = useCallback(
     (boardId: string) => {
-      const original = boardList.boards.find((b) => b.id === boardId);
+      const original = boardList.boards.find(b => b.id === boardId);
       if (!original) return;
 
       const newBoard: Board = {
@@ -329,7 +337,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
   // Helper to update current board
   const updateCurrentBoard = useCallback(
     (updateFn: (board: Board) => Board) => {
-      const newBoards = boardList.boards.map((b) => {
+      const newBoards = boardList.boards.map(b => {
         if (b.id !== boardList.currentBoardId) return b;
         return updateFn(b);
       });
@@ -357,7 +365,7 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
         cards: [],
       };
 
-      updateCurrentBoard((board) => ({
+      updateCurrentBoard(board => ({
         ...board,
         columns: [...board.columns, newColumn],
       }));
@@ -377,187 +385,209 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
         console.error('Failed to delete column via API:', error);
       }
 
-      updateCurrentBoard((board) => ({
+      updateCurrentBoard(board => ({
         ...board,
-        columns: board.columns.filter((col) => col.id !== columnId),
+        columns: board.columns.filter(col => col.id !== columnId),
       }));
     },
     [currentBoard, updateCurrentBoard, user]
   );
 
   // Card CRUD
-  const addCard = useCallback((columnId: string, title: string) => {
-    if (!currentBoard) return;
+  const addCard = useCallback(
+    (columnId: string, title: string) => {
+      if (!currentBoard) return;
 
-    const newCard: CardType = {
-      id: `card-${Date.now()}`,
-      title: title.trim(),
-      createdAt: new Date(),
-      labels: [],
-      assignee: undefined,
-      attachments: [],
-      checklists: [],
-      dueDate: null,
-      comments: [],
-    };
+      const newCard: CardType = {
+        id: `card-${Date.now()}`,
+        title: title.trim(),
+        createdAt: new Date(),
+        labels: [],
+        assignee: undefined,
+        attachments: [],
+        checklists: [],
+        dueDate: null,
+        comments: [],
+      };
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const deleteCard = useCallback((columnId: string, cardId: string) => {
-    if (!currentBoard) return;
+  const deleteCard = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!currentBoard) return;
 
-    const column = currentBoard.columns.find((col) => col.id === columnId);
-    const card = column?.cards.find((c) => c.id === cardId);
-    if (!card) return;
+      const column = currentBoard.columns.find(col => col.id === columnId);
+      const card = column?.cards.find(c => c.id === cardId);
+      if (!card) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? {
-              ...col,
-              cards: col.cards.filter((c) => c.id !== cardId),
-              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
-            }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? {
+                ...col,
+                cards: col.cards.filter(c => c.id !== cardId),
+                archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+              }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const archiveCard = useCallback((columnId: string, cardId: string) => {
-    if (!currentBoard) return;
+  const archiveCard = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!currentBoard) return;
 
-    const column = currentBoard.columns.find((col) => col.id === columnId);
-    const card = column?.cards.find((c) => c.id === cardId);
-    if (!card) return;
+      const column = currentBoard.columns.find(col => col.id === columnId);
+      const card = column?.cards.find(c => c.id === cardId);
+      if (!card) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? {
-              ...col,
-              cards: col.cards.filter((c) => c.id !== cardId),
-              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
-            }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? {
+                ...col,
+                cards: col.cards.filter(c => c.id !== cardId),
+                archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+              }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const unarchiveCard = useCallback((columnId: string, cardId: string) => {
-    if (!currentBoard) return;
+  const unarchiveCard = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!currentBoard) return;
 
-    const column = currentBoard.columns.find((col) => col.id === columnId);
-    const card = column?.archivedCards?.find((c) => c.id === cardId);
-    if (!card) return;
+      const column = currentBoard.columns.find(col => col.id === columnId);
+      const card = column?.archivedCards?.find(c => c.id === cardId);
+      if (!card) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? {
-              ...col,
-              cards: [...col.cards, { ...card, archived: false }],
-              archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [],
-            }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? {
+                ...col,
+                cards: [...col.cards, { ...card, archived: false }],
+                archivedCards: col.archivedCards?.filter(c => c.id !== cardId) || [],
+              }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const permanentlyDeleteCard = useCallback((columnId: string, cardId: string) => {
-    if (!currentBoard) return;
+  const permanentlyDeleteCard = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!currentBoard) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? { ...col, archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [] }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? { ...col, archivedCards: col.archivedCards?.filter(c => c.id !== cardId) || [] }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const duplicateCard = useCallback((columnId: string, cardId: string) => {
-    if (!currentBoard) return;
+  const duplicateCard = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!currentBoard) return;
 
-    const column = currentBoard.columns.find((col) => col.id === columnId);
-    const card = column?.cards.find((c) => c.id === cardId);
-    if (!card) return;
+      const column = currentBoard.columns.find(col => col.id === columnId);
+      const card = column?.cards.find(c => c.id === cardId);
+      if (!card) return;
 
-    const cardIndex = column?.cards.findIndex((c) => c.id === cardId);
-    const newCard: CardType = {
-      ...card,
-      id: `card-${Date.now()}`,
-      title: `${card.title} (Copy)`,
-      createdAt: new Date(),
-      comments: [],
-    };
+      const cardIndex = column?.cards.findIndex(c => c.id === cardId);
+      const newCard: CardType = {
+        ...card,
+        id: `card-${Date.now()}`,
+        title: `${card.title} (Copy)`,
+        createdAt: new Date(),
+        comments: [],
+      };
 
-    if (cardIndex === undefined || cardIndex === -1) return;
+      if (cardIndex === undefined || cardIndex === -1) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? {
-              ...col,
-              cards: [
-                ...col.cards.slice(0, cardIndex + 1),
-                newCard,
-                ...col.cards.slice(cardIndex + 1),
-              ],
-            }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? {
+                ...col,
+                cards: [
+                  ...col.cards.slice(0, cardIndex + 1),
+                  newCard,
+                  ...col.cards.slice(cardIndex + 1),
+                ],
+              }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const moveCard = useCallback((cardId: string, fromColumnId: string, toColumnId: string) => {
-    if (!currentBoard || fromColumnId === toColumnId) return;
+  const moveCard = useCallback(
+    (cardId: string, fromColumnId: string, toColumnId: string) => {
+      if (!currentBoard || fromColumnId === toColumnId) return;
 
-    const fromColumn = currentBoard.columns.find((col) => col.id === fromColumnId);
-    const card = fromColumn?.cards.find((c) => c.id === cardId);
-    if (!card) return;
+      const fromColumn = currentBoard.columns.find(col => col.id === fromColumnId);
+      const card = fromColumn?.cards.find(c => c.id === cardId);
+      if (!card) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) => {
-        if (col.id === fromColumnId) {
-          return { ...col, cards: col.cards.filter((c) => c.id !== cardId) };
-        }
-        if (col.id === toColumnId) {
-          return { ...col, cards: [...col.cards, card] };
-        }
-        return col;
-      }),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col => {
+          if (col.id === fromColumnId) {
+            return { ...col, cards: col.cards.filter(c => c.id !== cardId) };
+          }
+          if (col.id === toColumnId) {
+            return { ...col, cards: [...col.cards, card] };
+          }
+          return col;
+        }),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
-  const updateCard = useCallback((columnId: string, cardId: string, updates: Partial<Card>) => {
-    if (!currentBoard) return;
+  const updateCard = useCallback(
+    (columnId: string, cardId: string, updates: Partial<Card>) => {
+      if (!currentBoard) return;
 
-    updateCurrentBoard((board) => ({
-      ...board,
-      columns: board.columns.map((col) =>
-        col.id === columnId
-          ? {
-              ...col,
-              cards: col.cards.map((card) =>
-                card.id === cardId ? { ...card, ...updates } : card
-              ),
-            }
-          : col
-      ),
-    }));
-  }, [currentBoard, updateCurrentBoard]);
+      updateCurrentBoard(board => ({
+        ...board,
+        columns: board.columns.map(col =>
+          col.id === columnId
+            ? {
+                ...col,
+                cards: col.cards.map(card => (card.id === cardId ? { ...card, ...updates } : card)),
+              }
+            : col
+        ),
+      }));
+    },
+    [currentBoard, updateCurrentBoard]
+  );
 
   // Export board
   const exportBoard = useCallback(() => {
@@ -569,20 +599,21 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
       board: {
         id: currentBoard.id,
         name: currentBoard.name,
-        columns: currentBoard.columns.map((col) => ({
+        columns: currentBoard.columns.map(col => ({
           ...col,
-          cards: col.cards.map((card) => ({
+          cards: col.cards.map(card => ({
             ...card,
             dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
             createdAt: new Date(card.createdAt).toISOString(),
             archived: card.archived || false,
           })),
-          archivedCards: col.archivedCards?.map((card) => ({
-            ...card,
-            dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
-            createdAt: new Date(card.createdAt).toISOString(),
-            archived: true,
-          })) || [],
+          archivedCards:
+            col.archivedCards?.map(card => ({
+              ...card,
+              dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
+              createdAt: new Date(card.createdAt).toISOString(),
+              archived: true,
+            })) || [],
         })),
       },
     };
@@ -623,7 +654,12 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
               });
               const newBoardList: BoardList = {
                 boards: [
-                  { ...oldBoard, id: `board-${Date.now()}`, name: 'My Board', createdAt: new Date() },
+                  {
+                    ...oldBoard,
+                    id: `board-${Date.now()}`,
+                    name: 'My Board',
+                    createdAt: new Date(),
+                  },
                 ],
                 currentBoardId: oldBoard.id,
               };
@@ -631,10 +667,10 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
               setBoardList(newBoardList);
             } else {
               const boardListData = parsed as BoardList;
-              boardListData.boards.forEach((board) => {
+              boardListData.boards.forEach(board => {
                 board.createdAt = new Date(board.createdAt);
-                board.columns.forEach((col) => {
-                  col.cards.forEach((card) => {
+                board.columns.forEach(col => {
+                  col.cards.forEach(card => {
                     card.createdAt = new Date(card.createdAt);
                     if (card.dueDate) card.dueDate = new Date(card.dueDate);
                   });
@@ -662,10 +698,9 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
     if (isLoaded && boardList) {
       // Convert for localStorage (handle Date objects)
       const boardListForStorage = {
-        boards: boardList.boards.map((board) => ({
+        boards: boardList.boards.map(board => ({
           ...board,
-          createdAt:
-            board.createdAt instanceof Date ? board.createdAt.getTime() : board.createdAt,
+          createdAt: board.createdAt instanceof Date ? board.createdAt.getTime() : board.createdAt,
         })),
         currentBoardId: boardList.currentBoardId,
       };

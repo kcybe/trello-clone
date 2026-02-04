@@ -2,6 +2,7 @@
 
 import { Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Trash2, Plus, Archive, RotateCcw, Trash } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -12,6 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+
 import { BoardColumnProps } from '../../types';
 import { CardItem } from '../CardItem';
 
@@ -44,13 +46,18 @@ export function BoardColumn({
     <div className="flex-shrink-0 w-72 bg-muted/50 dark:bg-muted/20 rounded-lg p-2">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-sm">{column.title}</h2>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDeleteColumn(column.id)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onDeleteColumn(column.id)}
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
       <Droppable droppableId={column.id}>
-        {(provided) => (
+        {provided => (
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
@@ -88,7 +95,10 @@ export function BoardColumn({
         )}
       </Droppable>
 
-      <Dialog open={isAddCardOpen === column.id} onOpenChange={(open) => (open ? onOpenAddCard(column.id) : onCloseAddCard())}>
+      <Dialog
+        open={isAddCardOpen === column.id}
+        onOpenChange={open => (open ? onOpenAddCard(column.id) : onCloseAddCard())}
+      >
         <DialogTrigger asChild>
           <Button variant="ghost" className="w-full justify-start mt-2">
             <Plus className="h-4 w-4 mr-2" />
@@ -102,7 +112,7 @@ export function BoardColumn({
           <Input
             placeholder="Card title..."
             autoFocus
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
                 onAddCard(column.id);
               }
@@ -126,7 +136,7 @@ export function BoardColumn({
               Archived ({column.archivedCards.length})
             </summary>
             <div className="mt-2 space-y-2">
-              {column.archivedCards.map((card) => (
+              {column.archivedCards.map(card => (
                 <Card key={card.id} className="opacity-60">
                   <CardContent className="p-2 flex items-center justify-between">
                     <span className="text-sm truncate flex-1">{card.title}</span>

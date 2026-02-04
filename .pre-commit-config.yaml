@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: npx prettier --check
+        language: system
+        types: [typescript, javascript, json]
+        pass_filenames: false
+        stages: [pre-commit]

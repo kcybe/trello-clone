@@ -1,7 +1,16 @@
-export type ActivityType = 
-  | "card_created" | "card_moved" | "card_edited" | "card_archived" 
-  | "card_restored" | "card_deleted" | "card_duplicated" | "comment_added" 
-  | "due_date_set" | "due_date_changed" | "label_added" | "member_assigned";
+export type ActivityType =
+  | 'card_created'
+  | 'card_moved'
+  | 'card_edited'
+  | 'card_archived'
+  | 'card_restored'
+  | 'card_deleted'
+  | 'card_duplicated'
+  | 'comment_added'
+  | 'due_date_set'
+  | 'due_date_changed'
+  | 'label_added'
+  | 'member_assigned';
 
 export type Activity = {
   id: string;

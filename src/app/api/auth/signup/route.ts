@@ -1,5 +1,6 @@
-import { auth } from "@/lib/auth";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,14 +8,14 @@ export async function POST(req: NextRequest) {
 
     if (!name || !email || !password) {
       return NextResponse.json(
-        { error: "Name, email, and password are required" },
+        { error: 'Name, email, and password are required' },
         { status: 400 }
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters" },
+        { error: 'Password must be at least 8 characters' },
         { status: 400 }
       );
     }
@@ -26,9 +27,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error("Sign up error:", error);
+    console.error('Sign up error:', error);
     return NextResponse.json(
-      { error: "Registration failed. Email may already be in use." },
+      { error: 'Registration failed. Email may already be in use.' },
       { status: 400 }
     );
   }

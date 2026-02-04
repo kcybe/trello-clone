@@ -1,9 +1,25 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Activity } from "@/types";
-import { X, Plus, Move, Edit, Archive, RotateCcw, Trash2, Copy, MessageCircle, Calendar, Tag, User, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  X,
+  Plus,
+  Move,
+  Edit,
+  Archive,
+  RotateCcw,
+  Trash2,
+  Copy,
+  MessageCircle,
+  Calendar,
+  Tag,
+  User,
+  Clock,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Activity } from '@/types';
+
+import { useState, useEffect } from 'react';
 
 interface ActivityPanelProps {
   activities: Activity[];
@@ -26,18 +42,18 @@ const activityIcons: Record<string, React.ReactNode> = {
 };
 
 const activityDescriptions: Record<string, string> = {
-  card_created: "created this card",
-  card_moved: "moved this card",
-  card_edited: "edited this card",
-  card_archived: "archived this card",
-  card_restored: "restored this card",
-  card_deleted: "deleted this card",
-  card_duplicated: "duplicated this card",
-  comment_added: "added a comment",
-  due_date_set: "set due date",
-  due_date_changed: "changed due date",
-  label_added: "added a label",
-  member_assigned: "assigned a member",
+  card_created: 'created this card',
+  card_moved: 'moved this card',
+  card_edited: 'edited this card',
+  card_archived: 'archived this card',
+  card_restored: 'restored this card',
+  card_deleted: 'deleted this card',
+  card_duplicated: 'duplicated this card',
+  comment_added: 'added a comment',
+  due_date_set: 'set due date',
+  due_date_changed: 'changed due date',
+  label_added: 'added a label',
+  member_assigned: 'assigned a member',
 };
 
 function formatRelativeTime(date: Date): string {
@@ -47,7 +63,7 @@ function formatRelativeTime(date: Date): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "Just now";
+  if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
@@ -63,8 +79,8 @@ export default function ActivityPanel({ activities, onClose }: ActivityPanelProp
 
   if (!mounted) return null;
 
-  const sortedActivities = [...activities].sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sortedActivities = [...activities].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
   return (
@@ -90,7 +106,7 @@ export default function ActivityPanel({ activities, onClose }: ActivityPanelProp
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedActivities.map((activity) => (
+            {sortedActivities.map(activity => (
               <div key={activity.id} className="flex gap-3 text-sm">
                 <div className="flex-shrink-0 mt-0.5">
                   {activityIcons[activity.type] || <Clock className="h-4 w-4 text-gray-500" />}
@@ -103,13 +119,19 @@ export default function ActivityPanel({ activities, onClose }: ActivityPanelProp
                     </span>
                   </div>
                   <p className="text-muted-foreground truncate">{activity.cardTitle}</p>
-                  {activity.type === "card_moved" && activity.fromColumnName && activity.toColumnName && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <span className="bg-muted px-1.5 py-0.5 rounded">{activity.fromColumnName}</span>
-                      <Move className="h-3 w-3" />
-                      <span className="bg-muted px-1.5 py-0.5 rounded">{activity.toColumnName}</span>
-                    </div>
-                  )}
+                  {activity.type === 'card_moved' &&
+                    activity.fromColumnName &&
+                    activity.toColumnName && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <span className="bg-muted px-1.5 py-0.5 rounded">
+                          {activity.fromColumnName}
+                        </span>
+                        <Move className="h-3 w-3" />
+                        <span className="bg-muted px-1.5 py-0.5 rounded">
+                          {activity.toColumnName}
+                        </span>
+                      </div>
+                    )}
                   {activity.description && (
                     <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
                   )}

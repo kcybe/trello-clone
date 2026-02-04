@@ -1,9 +1,4 @@
-export type TemplateCategory = 
-  | 'kanban'
-  | 'scrum'
-  | 'bug-tracking'
-  | 'marketing'
-  | 'weekly-review';
+export type TemplateCategory = 'kanban' | 'scrum' | 'bug-tracking' | 'marketing' | 'weekly-review';
 
 export interface BoardTemplate {
   id: string;

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Plus,
   X,
@@ -21,8 +20,8 @@ import {
   LogOut,
   Share2,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -30,9 +29,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { BoardHeaderProps } from '../types';
-import { LayoutTemplate, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+
+import { useState } from 'react';
+
 import { BOARD_TEMPLATES } from '../../hooks/useBoard';
+import { BoardHeaderProps } from '../types';
 
 export function BoardHeader({
   currentBoard,
@@ -109,7 +111,7 @@ export function BoardHeader({
               <div className="p-2 border-b">
                 <span className="text-sm font-medium text-muted-foreground">Boards</span>
               </div>
-              {boardList.boards.map((board) => (
+              {boardList.boards.map(board => (
                 <button
                   key={board.id}
                   onClick={() => {
@@ -164,12 +166,14 @@ export function BoardHeader({
                       <div>
                         <label className="text-sm font-medium mb-2 block">Choose a Template</label>
                         <div className="grid grid-cols-1 gap-2">
-                          {BOARD_TEMPLATES.map((template) => (
+                          {BOARD_TEMPLATES.map(template => (
                             <button
                               key={template.id}
                               type="button"
                               onClick={() => {
-                                const nameInput = document.getElementById('new-board-name') as HTMLInputElement;
+                                const nameInput = document.getElementById(
+                                  'new-board-name'
+                                ) as HTMLInputElement;
                                 const name = nameInput?.value || 'New Board';
                                 onCreateBoard(name, template.columns);
                                 setShowBoardDropdown(false);
@@ -185,7 +189,9 @@ export function BoardHeader({
                           <button
                             type="button"
                             onClick={() => {
-                              const nameInput = document.getElementById('new-board-name') as HTMLInputElement;
+                              const nameInput = document.getElementById(
+                                'new-board-name'
+                              ) as HTMLInputElement;
                               const name = nameInput?.value || 'New Board';
                               onCreateBoard(name);
                               setShowBoardDropdown(false);
@@ -258,7 +264,7 @@ export function BoardHeader({
           <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           <select
             value={sortBy}
-            onChange={(e) => onSetSortBy(e.target.value as 'manual' | 'date' | 'title')}
+            onChange={e => onSetSortBy(e.target.value as 'manual' | 'date' | 'title')}
             className="bg-transparent text-sm border rounded px-2 py-1"
           >
             <option value="manual">Manual</option>
@@ -279,11 +285,11 @@ export function BoardHeader({
           <Filter className="h-4 w-4 text-muted-foreground" />
           <select
             value={filterLabel}
-            onChange={(e) => onSetFilterLabel(e.target.value)}
+            onChange={e => onSetFilterLabel(e.target.value)}
             className="bg-transparent text-sm border rounded px-2 py-1"
           >
             <option value="">All Labels</option>
-            {LABEL_COLORS.map((label) => (
+            {LABEL_COLORS.map(label => (
               <option key={label.name} value={label.name}>
                 {label.name}
               </option>
@@ -291,11 +297,11 @@ export function BoardHeader({
           </select>
           <select
             value={filterMember}
-            onChange={(e) => onSetFilterMember(e.target.value)}
+            onChange={e => onSetFilterMember(e.target.value)}
             className="bg-transparent text-sm border rounded px-2 py-1"
           >
             <option value="">All Members</option>
-            {MEMBER_SUGGESTIONS.map((member) => (
+            {MEMBER_SUGGESTIONS.map(member => (
               <option key={member} value={member}>
                 {member}
               </option>
@@ -323,7 +329,7 @@ export function BoardHeader({
             placeholder="Search cards..."
             className="pl-8 w-48"
             value={searchQuery}
-            onChange={(e) => onSetSearchQuery(e.target.value)}
+            onChange={e => onSetSearchQuery(e.target.value)}
           />
           {searchQuery && (
             <button
@@ -336,7 +342,12 @@ export function BoardHeader({
         </div>
 
         {/* Shortcuts help */}
-        <Button variant="ghost" size="icon" onClick={onShowShortcuts} title="Keyboard shortcuts (?)">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onShowShortcuts}
+          title="Keyboard shortcuts (?)"
+        >
           <Keyboard className="h-5 w-5" />
         </Button>
 
@@ -374,7 +385,12 @@ export function BoardHeader({
                 </Button>
               </div>
               {!notificationsEnabled ? (
-                <Button variant="outline" size="sm" className="w-full" onClick={onRequestNotificationPermission}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={onRequestNotificationPermission}
+                >
                   Enable Notifications
                 </Button>
               ) : (
@@ -407,7 +423,12 @@ export function BoardHeader({
               </Button>
             </div>
           ) : (
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => setShowAuthDialog(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setShowAuthDialog(true)}
+            >
               <LogIn className="h-4 w-4" />
               Sign In
             </Button>
@@ -436,12 +457,7 @@ export function BoardHeader({
 
         {/* Share button */}
         {onOpenShare && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenShare}
-            className="gap-1"
-          >
+          <Button variant="outline" size="sm" onClick={onOpenShare} className="gap-1">
             <Share2 className="h-4 w-4" />
             Share
           </Button>

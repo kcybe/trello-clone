@@ -1,8 +1,19 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
-import { Pencil, Archive, Copy, ArrowRight, Calendar, Paperclip, CheckSquare, MessageCircle } from 'lucide-react';
+import {
+  Pencil,
+  Archive,
+  Copy,
+  ArrowRight,
+  Calendar,
+  Paperclip,
+  CheckSquare,
+  MessageCircle,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+
 import { CardItemProps } from '../../types';
 
 export function CardItem({
@@ -26,7 +37,7 @@ export function CardItem({
 
   const getChecklistProgress = (checklist: { items: { checked: boolean }[] }) => {
     if (checklist.items.length === 0) return null;
-    const checked = checklist.items.filter((i) => i.checked).length;
+    const checked = checklist.items.filter(i => i.checked).length;
     return { checked, total: checklist.items.length };
   };
 
@@ -41,7 +52,7 @@ export function CardItem({
         {/* Labels */}
         {card.labels && card.labels.length > 0 && !isCompact && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {card.labels.map((label) => (
+            {card.labels.map(label => (
               <span
                 key={label.id}
                 className={`${label.color} text-white text-xs px-2 py-0.5 rounded-full`}
@@ -67,7 +78,15 @@ export function CardItem({
 
         <div className="flex items-start justify-between gap-2 mt-1">
           {isCompact ? (
-            <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 -mt-1"
+              onClick={e => {
+                e.stopPropagation();
+                onEdit();
+              }}
+            >
               <Pencil className="h-3 w-3" />
             </Button>
           ) : (
@@ -76,7 +95,10 @@ export function CardItem({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
               >
                 <Pencil className="h-3 w-3" />
               </Button>
@@ -84,7 +106,10 @@ export function CardItem({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-muted-foreground"
-                onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  onArchive();
+                }}
                 title="Archive card"
               >
                 <Archive className="h-3 w-3" />
@@ -93,7 +118,10 @@ export function CardItem({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-muted-foreground"
-                onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  onDuplicate();
+                }}
                 title="Duplicate card"
               >
                 <Copy className="h-3 w-3" />
@@ -104,7 +132,10 @@ export function CardItem({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-muted-foreground"
-                onClick={(e) => { e.stopPropagation(); onMove(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  onMove();
+                }}
                 title="Move card"
               >
                 <ArrowRight className="h-3 w-3" />
@@ -126,7 +157,7 @@ export function CardItem({
         {/* Attachments */}
         {card.attachments && card.attachments.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {card.attachments.map((att) => (
+            {card.attachments.map(att => (
               <div
                 key={att.id}
                 className="flex items-center gap-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded"
@@ -141,7 +172,7 @@ export function CardItem({
         {/* Checklist progress */}
         {card.checklists && card.checklists.length > 0 && (
           <div className="mt-2 space-y-1">
-            {card.checklists.map((checklist) => {
+            {card.checklists.map(checklist => {
               const progress = getChecklistProgress(checklist);
               if (!progress) return null;
               return (

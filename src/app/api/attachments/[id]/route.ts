@@ -1,13 +1,14 @@
-import { auth } from "@/lib/auth";
-import { deleteFile } from "@/lib/s3";
-import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { deleteFile } from '@/lib/s3';
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -16,11 +17,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
 
     if (!attachment) {
-      return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
     }
 
     // Delete from local filesystem
-    const filename = attachment.url.split("/uploads/")[1];
+    const filename = attachment.url.split('/uploads/')[1];
     if (filename) {
       deleteFile(filename);
     }
@@ -30,7 +31,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete error:", error);
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    console.error('Delete error:', error);
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 }

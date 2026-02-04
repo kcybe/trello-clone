@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   X,
   Tag,
@@ -15,17 +14,16 @@ import {
   Eye,
   Plus,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { CardModalProps } from '../../types';
+
 import { LABEL_COLORS, MEMBER_SUGGESTIONS } from '../../hooks/useCards';
+import { CardModalProps } from '../../types';
 
 export function CardModal({
   isOpen,
@@ -73,7 +71,7 @@ export function CardModal({
   if (!editingCard) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Card</DialogTitle>
@@ -82,7 +80,7 @@ export function CardModal({
           {/* Title */}
           <div>
             <label className="text-sm font-medium">Title</label>
-            <Input value={editingCard.title} onChange={(e) => updateCardTitle(e.target.value)} />
+            <Input value={editingCard.title} onChange={e => updateCardTitle(e.target.value)} />
           </div>
 
           {/* Description */}
@@ -94,7 +92,9 @@ export function CardModal({
                   type="button"
                   onClick={() => setDescTab('edit')}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
-                    descTab === 'edit' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    descTab === 'edit'
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Edit2 className="h-3 w-3" />
@@ -104,7 +104,9 @@ export function CardModal({
                   type="button"
                   onClick={() => setDescTab('preview')}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
-                    descTab === 'preview' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    descTab === 'preview'
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Eye className="h-3 w-3" />
@@ -117,7 +119,7 @@ export function CardModal({
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                 rows={6}
                 value={editingCard.description}
-                onChange={(e) => updateCardDescription(e.target.value)}
+                onChange={e => updateCardDescription(e.target.value)}
                 placeholder="Add a description... (Markdown supported)"
               />
             ) : (
@@ -141,7 +143,7 @@ export function CardModal({
               Labels
             </label>
             <div className="flex flex-wrap gap-1 mt-2">
-              {editingCard.labels.map((label) => (
+              {editingCard.labels.map(label => (
                 <span
                   key={label.id}
                   className={`${label.color} text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1`}
@@ -157,8 +159,8 @@ export function CardModal({
               <Input
                 placeholder="New label..."
                 value={newLabelText}
-                onChange={(e) => setNewLabelText(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setNewLabelText(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     addLabel();
@@ -171,12 +173,12 @@ export function CardModal({
               </Button>
             </div>
             <div className="flex flex-wrap gap-1 mt-2">
-              {LABEL_COLORS.map((color) => (
+              {LABEL_COLORS.map(color => (
                 <button
                   key={color.value}
                   className={`${color.value} w-6 h-6 rounded-full border-2 border-transparent hover:border-white`}
                   onClick={() => {
-                    const newLabel: typeof editingCard.labels[0] = {
+                    const newLabel: (typeof editingCard.labels)[0] = {
                       id: `label-${Date.now()}`,
                       text: newLabelText || 'New',
                       color: color.value,
@@ -214,11 +216,11 @@ export function CardModal({
               <Input
                 placeholder="Add member..."
                 value={newMemberName}
-                onChange={(e) => {
+                onChange={e => {
                   setNewMemberName(e.target.value);
                   setShowMemberSuggestions(true);
                 }}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     addMember();
@@ -229,9 +231,9 @@ export function CardModal({
               />
               {showMemberSuggestions && newMemberName && (
                 <div className="absolute z-10 w-full bg-background border rounded-md shadow-lg mt-1">
-                  {MEMBER_SUGGESTIONS.filter((m) =>
+                  {MEMBER_SUGGESTIONS.filter(m =>
                     m.toLowerCase().includes(newMemberName.toLowerCase())
-                  ).map((member) => (
+                  ).map(member => (
                     <button
                       key={member}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
@@ -260,8 +262,11 @@ export function CardModal({
             </label>
             {editingCard.attachments && editingCard.attachments.length > 0 && (
               <div className="space-y-1 mt-2">
-                {editingCard.attachments.map((att) => (
-                  <div key={att.id} className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
+                {editingCard.attachments.map(att => (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-2 bg-muted rounded-md px-3 py-2"
+                  >
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
                     <span className="flex-1 text-sm truncate">{att.name}</span>
                     <Button
@@ -280,13 +285,13 @@ export function CardModal({
               <Input
                 placeholder="Attachment name..."
                 value={newAttachmentName}
-                onChange={(e) => setNewAttachmentName(e.target.value)}
+                onChange={e => setNewAttachmentName(e.target.value)}
                 className="col-span-2"
               />
               <Input
                 placeholder="URL..."
                 value={newAttachmentUrl}
-                onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                onChange={e => setNewAttachmentUrl(e.target.value)}
                 className="col-span-2"
               />
               <Button
@@ -310,7 +315,7 @@ export function CardModal({
             </label>
             {editingCard.checklists && editingCard.checklists.length > 0 && (
               <div className="space-y-3 mt-2">
-                {editingCard.checklists.map((checklist) => (
+                {editingCard.checklists.map(checklist => (
                   <div key={checklist.id} className="bg-muted rounded-md p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{checklist.title}</span>
@@ -325,7 +330,7 @@ export function CardModal({
                     </div>
                     {checklist.items.length > 0 && (
                       <div className="space-y-1 mb-2">
-                        {checklist.items.map((item) => (
+                        {checklist.items.map(item => (
                           <div key={item.id} className="flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -370,8 +375,8 @@ export function CardModal({
                       <Input
                         placeholder="Add item..."
                         value={newChecklistItem}
-                        onChange={(e) => setNewChecklistItem(e.target.value)}
-                        onKeyDown={(e) => {
+                        onChange={e => setNewChecklistItem(e.target.value)}
+                        onKeyDown={e => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             addChecklistItem(checklist.id);
@@ -397,8 +402,8 @@ export function CardModal({
               <Input
                 placeholder="New checklist title..."
                 value={newChecklistTitle}
-                onChange={(e) => setNewChecklistTitle(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setNewChecklistTitle(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     addChecklist();
@@ -428,7 +433,7 @@ export function CardModal({
             {/* Comment list */}
             {editingCard.comments && editingCard.comments.length > 0 && (
               <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                {editingCard.comments.map((comment) => (
+                {editingCard.comments.map(comment => (
                   <div key={comment.id} className="bg-muted rounded-md p-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium">{comment.author}</span>
@@ -457,8 +462,8 @@ export function CardModal({
               <Input
                 placeholder="Your name..."
                 value={newCommentAuthor}
-                onChange={(e) => setNewCommentAuthor(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setNewCommentAuthor(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter' && newCommentAuthor.trim() && newCommentText.trim()) {
                     e.preventDefault();
                     addComment();
@@ -469,8 +474,8 @@ export function CardModal({
                 <Input
                   placeholder="Write a comment..."
                   value={newCommentText}
-                  onChange={(e) => setNewCommentText(e.target.value)}
-                  onKeyDown={(e) => {
+                  onChange={e => setNewCommentText(e.target.value)}
+                  onKeyDown={e => {
                     if (e.key === 'Enter' && newCommentAuthor.trim() && newCommentText.trim()) {
                       e.preventDefault();
                       addComment();
@@ -478,7 +483,10 @@ export function CardModal({
                   }}
                   className="flex-1"
                 />
-                <Button onClick={addComment} disabled={!newCommentAuthor.trim() || !newCommentText.trim()}>
+                <Button
+                  onClick={addComment}
+                  disabled={!newCommentAuthor.trim() || !newCommentText.trim()}
+                >
                   Post
                 </Button>
               </div>
@@ -501,7 +509,7 @@ export function CardModal({
                 { name: 'Blue', value: 'bg-blue-100 dark:bg-blue-900/30' },
                 { name: 'Purple', value: 'bg-purple-100 dark:bg-purple-900/30' },
                 { name: 'Pink', value: 'bg-pink-100 dark:bg-pink-900/30' },
-              ].map((color) => (
+              ].map(color => (
                 <button
                   key={color.name}
                   onClick={() => setColor(color.value)}
@@ -522,7 +530,12 @@ export function CardModal({
               <Calendar className="h-4 w-4" />
               Due Date
             </label>
-            <Input type="date" value={editingCard.dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2" />
+            <Input
+              type="date"
+              value={editingCard.dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="mt-2"
+            />
             {editingCard.dueDate && (
               <Button
                 variant="ghost"

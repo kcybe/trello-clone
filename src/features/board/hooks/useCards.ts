@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+
 import {
   Card,
   CardLabel,
@@ -51,31 +52,31 @@ interface UseCardsReturn {
   newChecklistItem: string;
   newCommentAuthor: string;
   newCommentText: string;
-  
+
   // Actions
   openEditCard: (card: Card, columnId: string) => void;
   closeEditCard: () => void;
   updateCardTitle: (title: string) => void;
   updateCardDescription: (description: string) => void;
   setDescTab: (tab: 'edit' | 'preview') => void;
-  
+
   // Label actions
   addLabel: () => void;
   removeLabel: (labelId: string) => void;
   setNewLabelText: (text: string) => void;
-  
+
   // Member actions
   addMember: () => void;
   removeMember: () => void;
   setNewMemberName: (name: string) => void;
   setShowMemberSuggestions: (show: boolean) => void;
-  
+
   // Attachment actions
   addAttachment: () => void;
   removeAttachment: (attachmentId: string) => void;
   setNewAttachmentUrl: (url: string) => void;
   setNewAttachmentName: (name: string) => void;
-  
+
   // Checklist actions
   addChecklist: () => void;
   removeChecklist: (checklistId: string) => void;
@@ -84,17 +85,17 @@ interface UseCardsReturn {
   removeChecklistItem: (checklistId: string, itemId: string) => void;
   toggleChecklistItem: (checklistId: string, itemId: string) => void;
   setNewChecklistItem: (text: string) => void;
-  
+
   // Comment actions
   addComment: () => void;
   deleteComment: (commentId: string) => void;
   setNewCommentAuthor: (author: string) => void;
   setNewCommentText: (text: string) => void;
-  
+
   // Color and date
   setColor: (color: string) => void;
   setDueDate: (date: string) => void;
-  
+
   // Helpers
   getChecklistProgress: (checklist: Checklist) => { checked: number; total: number } | null;
   clearCommentForm: () => void;
@@ -135,11 +136,11 @@ export function useCards(): UseCardsReturn {
   }, []);
 
   const updateCardTitle = useCallback((title: string) => {
-    setEditingCard((prev) => (prev ? { ...prev, title } : null));
+    setEditingCard(prev => (prev ? { ...prev, title } : null));
   }, []);
 
   const updateCardDescription = useCallback((description: string) => {
-    setEditingCard((prev) => (prev ? { ...prev, description } : null));
+    setEditingCard(prev => (prev ? { ...prev, description } : null));
   }, []);
 
   // Label actions
@@ -161,11 +162,11 @@ export function useCards(): UseCardsReturn {
   }, [newLabelText, editingCard]);
 
   const removeLabel = useCallback((labelId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            labels: prev.labels.filter((l) => l.id !== labelId),
+            labels: prev.labels.filter(l => l.id !== labelId),
           }
         : null
     );
@@ -180,7 +181,7 @@ export function useCards(): UseCardsReturn {
   }, [newMemberName, editingCard]);
 
   const removeMember = useCallback(() => {
-    setEditingCard((prev) => (prev ? { ...prev, assignee: undefined } : null));
+    setEditingCard(prev => (prev ? { ...prev, assignee: undefined } : null));
   }, []);
 
   // Attachment actions
@@ -201,11 +202,11 @@ export function useCards(): UseCardsReturn {
   }, [newAttachmentUrl, newAttachmentName, editingCard]);
 
   const removeAttachment = useCallback((attachmentId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            attachments: prev.attachments.filter((a) => a.id !== attachmentId),
+            attachments: prev.attachments.filter(a => a.id !== attachmentId),
           }
         : null
     );
@@ -227,11 +228,11 @@ export function useCards(): UseCardsReturn {
   }, [newChecklistTitle, editingCard]);
 
   const removeChecklist = useCallback((checklistId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            checklists: prev.checklists.filter((c) => c.id !== checklistId),
+            checklists: prev.checklists.filter(c => c.id !== checklistId),
           }
         : null
     );
@@ -242,7 +243,7 @@ export function useCards(): UseCardsReturn {
       if (!newChecklistItem.trim() || !editingCard) return;
       setEditingCard({
         ...editingCard,
-        checklists: editingCard.checklists.map((c) =>
+        checklists: editingCard.checklists.map(c =>
           c.id === checklistId
             ? {
                 ...c,
@@ -260,14 +261,12 @@ export function useCards(): UseCardsReturn {
   );
 
   const removeChecklistItem = useCallback((checklistId: string, itemId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            checklists: prev.checklists.map((c) =>
-              c.id === checklistId
-                ? { ...c, items: c.items.filter((i) => i.id !== itemId) }
-                : c
+            checklists: prev.checklists.map(c =>
+              c.id === checklistId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c
             ),
           }
         : null
@@ -275,17 +274,15 @@ export function useCards(): UseCardsReturn {
   }, []);
 
   const toggleChecklistItem = useCallback((checklistId: string, itemId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            checklists: prev.checklists.map((c) =>
+            checklists: prev.checklists.map(c =>
               c.id === checklistId
                 ? {
                     ...c,
-                    items: c.items.map((i) =>
-                      i.id === itemId ? { ...i, checked: !i.checked } : i
-                    ),
+                    items: c.items.map(i => (i.id === itemId ? { ...i, checked: !i.checked } : i)),
                   }
                 : c
             ),
@@ -311,11 +308,11 @@ export function useCards(): UseCardsReturn {
   }, [newCommentAuthor, newCommentText, editingCard]);
 
   const deleteComment = useCallback((commentId: string) => {
-    setEditingCard((prev) =>
+    setEditingCard(prev =>
       prev
         ? {
             ...prev,
-            comments: prev.comments.filter((c) => c.id !== commentId),
+            comments: prev.comments.filter(c => c.id !== commentId),
           }
         : null
     );
@@ -328,17 +325,17 @@ export function useCards(): UseCardsReturn {
 
   // Color and date
   const setColor = useCallback((color: string) => {
-    setEditingCard((prev) => (prev ? { ...prev, color } : null));
+    setEditingCard(prev => (prev ? { ...prev, color } : null));
   }, []);
 
   const setDueDate = useCallback((date: string) => {
-    setEditingCard((prev) => (prev ? { ...prev, dueDate: date } : null));
+    setEditingCard(prev => (prev ? { ...prev, dueDate: date } : null));
   }, []);
 
   // Helpers
   const getChecklistProgress = useCallback((checklist: Checklist) => {
     if (checklist.items.length === 0) return null;
-    const checked = checklist.items.filter((i) => i.checked).length;
+    const checked = checklist.items.filter(i => i.checked).length;
     return { checked, total: checklist.items.length };
   }, []);
 
@@ -444,10 +441,64 @@ export function useActivities() {
         toColumnName: options?.toColumnName,
         description: options?.description,
       };
-      setActivities((prev) => [newActivity, ...prev].slice(0, 100)); // Keep last 100 activities
+      setActivities(prev => [newActivity, ...prev].slice(0, 100)); // Keep last 100 activities
     },
     []
   );
 
   return { activities, addActivity };
+}
+
+// Keyboard shortcuts hook
+export function useKeyboardShortcuts(options: {
+  onNewCard?: () => void;
+  onSearch?: () => void;
+  onShortcuts?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onEscape?: () => void;
+  currentBoard: any;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === '/' && !e.target.value) {
+          e.preventDefault();
+          options.onSearch?.();
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        options.onUndo?.();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        options.onRedo?.();
+        return;
+      }
+
+      if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        options.onNewCard?.();
+      }
+      if (e.key === 'f' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        options.onSearch?.();
+      }
+      if (e.key === '?') {
+        e.preventDefault();
+        options.onShortcuts?.();
+      }
+      if (e.key === 'Escape') {
+        options.onEscape?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [options]);
 }
