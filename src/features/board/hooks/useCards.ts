@@ -10,7 +10,7 @@ import {
   LabelColor,
   ActivityType,
   Activity,
-} from '../types';
+} from '../../../types';
 
 // Label colors
 export const LABEL_COLORS: LabelColor[] = [

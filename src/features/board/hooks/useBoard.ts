@@ -11,7 +11,7 @@ import {
   ApiCard,
   BoardTemplate,
   ActivityType,
-} from '../types';
+} from '../../../types';
 
 // API functions
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {

@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 
-import { Board, Column, Card } from '../../features/board/types';
+import { Board, Column, Card } from '../../types';
 import {
   useBoardSocketEvents,
   CardCreatedData,

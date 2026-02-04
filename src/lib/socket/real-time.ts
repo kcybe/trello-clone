@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 
-import { Board, Column, Card } from '../../features/board/types';
+import { Board, Column, Card } from '../../types';
 import { getSocket } from './client';
 
 // Types for optimistic updates

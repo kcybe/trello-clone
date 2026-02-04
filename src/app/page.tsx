@@ -9,7 +9,7 @@ import { ShortcutsModal, AddColumnDialog } from '@/features/board/components/Boa
 import { BoardFooter } from '@/features/board/components/BoardFooter';
 import { BoardHeader } from '@/features/board/components/BoardHeader';
 import { CardModal } from '@/features/board/components/CardModal';
-import { Board, Card as CardType, ViewMode, SortBy, SortOrder, User } from '@/features/board/types';
+import { Board, Card as CardType, ViewMode, SortBy, SortOrder, User } from '@/types';
 
 import { useState, useEffect } from 'react';
 
