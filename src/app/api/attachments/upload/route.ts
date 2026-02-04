@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { saveFile } from "@/lib/s3";
+import { saveFile, UPLOAD_CONFIG } from "@/lib/s3";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,16 +19,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ["image/", "application/pdf", "video/"];
-    const isValidType = allowedTypes.some(type => file.type.startsWith(type));
+    const isValidType = UPLOAD_CONFIG.allowedTypes.includes(file.type);
     if (!isValidType) {
-      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+      return NextResponse.json({ 
+        error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF, MP4, WebM",
+        allowedTypes: UPLOAD_CONFIG.allowedTypes
+      }, { status: 400 });
     }
 
-    // Max size: 10MB
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
+    // Validate file size
+    if (file.size > UPLOAD_CONFIG.maxSize) {
+      return NextResponse.json({ error: `File too large (max ${UPLOAD_CONFIG.maxSize / (1024 * 1024)}MB)` }, { status: 400 });
     }
 
     // Save to local filesystem

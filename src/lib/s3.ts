@@ -1,6 +1,3 @@
-// Local filesystem storage for development
-// For production, replace with AWS S3 or similar
-
 import fs from "fs";
 import path from "path";
 
@@ -12,7 +9,7 @@ export function ensureUploadDir() {
   }
 }
 
-export async function saveFile(file: File, cardId: string): Promise<{ filename: string; url: string }> {
+export async function saveFile(file: File, _cardId: string): Promise<{ filename: string; url: string }> {
   ensureUploadDir();
   
   const ext = file.name.split(".").pop() || "";
@@ -34,3 +31,17 @@ export function deleteFile(filename: string): void {
     fs.unlinkSync(filepath);
   }
 }
+
+// Export configuration for validation
+export const UPLOAD_CONFIG = {
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "video/mp4",
+    "video/webm",
+  ],
+};
