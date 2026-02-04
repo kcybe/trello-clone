@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { BoardHeaderProps } from '../types';
 import { LayoutTemplate, Plus } from 'lucide-react';
-import { BOARD_TEMPLATES } from '../hooks/useBoard';
+import { BOARD_TEMPLATES } from '../../hooks/useBoard';
 
 export function BoardHeader({
   currentBoard,
