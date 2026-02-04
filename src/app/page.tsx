@@ -3,7 +3,7 @@
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 
 import ActivityPanel from '@/components/ActivityPanel';
-import { useBoard, useCards, useActivities, useKeyboardShortcuts } from '@/features/board';
+import { useBoardSocket, useCards, useActivities, useKeyboardShortcuts } from '@/features/board';
 import { BoardColumn } from '@/features/board/components/BoardColumn';
 import { ShortcutsModal, AddColumnDialog } from '@/features/board/components/BoardDialogs';
 import { BoardFooter } from '@/features/board/components/BoardFooter';
@@ -60,7 +60,7 @@ export default function Home() {
     undo,
     redo,
     updateCurrentBoard,
-  } = useBoard(user);
+  } = useBoardSocket(user);
   const {
     editingCard,
     descTab,
