@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -79,6 +79,7 @@ export default function Home() {
   const [newCardTitle, setNewCardTitle] = useState("");
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [isAddCardOpen, setIsAddCardOpen] = useState<string | null>(null);
+  const [view, setView] = useState<"board" | "calendar">("board");
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
