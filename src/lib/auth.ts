@@ -21,3 +21,6 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_URL || "http://localhost:3000",
   ],
 });
+
+export const { GET, POST } = auth;
+

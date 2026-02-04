@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock, Eye, Edit2 } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff, Clock, Eye, Edit2, LogIn, LogOut, UserPlus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ActivityPanel from "@/components/ActivityPanel";
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,119 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType, BoardList } from "@/types";
+import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType, BoardList, ApiBoard, ApiColumn, ApiCard, User as UserType } from "@/types";
+
+// Helper to convert API board to local format
+function apiBoardToLocal(apiBoard: ApiBoard): Board {
+  return {
+    id: apiBoard.id,
+    name: apiBoard.name,
+    description: apiBoard.description || undefined,
+    color: apiBoard.color || undefined,
+    columns: apiBoard.columns.map(apiCol => ({
+      id: apiCol.id,
+      name: apiCol.name,
+      title: apiCol.name, // Add title for compatibility
+      cards: apiCol.cards.map(apiCard => ({
+        id: apiCard.id,
+        title: apiCard.title,
+        description: apiCard.description || undefined,
+        labels: [],
+        assignee: apiCard.assignees?.[0]?.name,
+        attachments: [],
+        checklists: [],
+        dueDate: apiCard.dueDate ? new Date(apiCard.dueDate) : null,
+        createdAt: new Date(apiCard.createdAt),
+        comments: []
+      }))
+    })),
+    createdAt: new Date(apiBoard.createdAt),
+    updatedAt: new Date(apiBoard.updatedAt),
+    ownerId: apiBoard.ownerId
+  };
+}
+
+// API functions
+async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers
+    }
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(error.error || "Request failed");
+  }
+  
+  return res.json();
+}
+
+async function fetchBoards(): Promise<ApiBoard[]> {
+  return fetchApi<ApiBoard[]>("/api/boards");
+}
+
+async function createBoardApi(data: { name: string; description?: string; color?: string }): Promise<ApiBoard> {
+  return fetchApi<ApiBoard>("/api/boards", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+}
+
+async function deleteBoardApi(boardId: string): Promise<void> {
+  await fetchApi(`/api/boards/${boardId}`, { method: "DELETE" });
+}
+
+async function createColumnApi(boardId: string, name: string): Promise<ApiColumn> {
+  return fetchApi<ApiColumn>(`/api/boards/${boardId}/columns`, {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+}
+
+async function deleteColumnApi(columnId: string): Promise<void> {
+  await fetchApi(`/api/cards/${columnId}`, { method: "DELETE" });
+}
+
+async function createCardApi(columnId: string, data: { title: string; description?: string }): Promise<ApiCard> {
+  return fetchApi<ApiCard>("/api/cards", {
+    method: "POST",
+    body: JSON.stringify({ ...data, columnId })
+  });
+}
+
+async function deleteCardApi(cardId: string): Promise<void> {
+  await fetchApi(`/api/cards/${cardId}`, { method: "DELETE" });
+}
+
+// Auth helper functions
+async function signIn(email: string, password: string) {
+  return fetchApi("/api/auth/signin/email", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+}
+
+async function signUp(name: string, email: string, password: string) {
+  return fetchApi("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password })
+  });
+}
+
+async function signOut() {
+  return fetchApi("/api/auth/signout", { method: "POST" });
+}
 
 const STORAGE_KEY = "trello-clone-boards";
 
 // Default columns template
 const DEFAULT_COLUMNS: Column[] = [
-  { id: "todo", title: "To Do", cards: [] },
-  { id: "in-progress", title: "In Progress", cards: [] },
-  { id: "done", title: "Done", cards: [] },
+  { id: "todo", title: "To Do", name: "To Do", cards: [] },
+  { id: "in-progress", title: "In Progress", name: "In Progress", cards: [] },
+  { id: "done", title: "Done", name: "Done", cards: [] },
 ];
 
 // Create columns from template names
@@ -31,6 +135,7 @@ const createColumnsFromTemplate = (columnNames: string[]): Column[] => {
   return columnNames.map((title, index) => ({
     id: `col-${Date.now()}-${index}`,
     title,
+    name: title,
     cards: []
   }));
 };
@@ -39,8 +144,12 @@ const createColumnsFromTemplate = (columnNames: string[]): Column[] => {
 const createInitialBoard = (name: string = "My Board", templateColumns?: string[]): Board => ({
   id: `board-${Date.now()}`,
   name,
+  description: undefined,
+  color: undefined,
   columns: templateColumns ? createColumnsFromTemplate(templateColumns) : DEFAULT_COLUMNS,
-  createdAt: Date.now(),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ownerId: "",
 });
 
 // Board templates with pre-configured columns
@@ -298,7 +407,25 @@ export default function Home() {
   };
   
   // Board CRUD operations
-  const createBoard = (name: string, templateColumns?: string[]) => {
+  const createBoard = async (name: string, templateColumns?: string[]) => {
+    try {
+      if (user) {
+        // Use API when signed in
+        const apiBoard = await createBoardApi({ name });
+        const newBoard = apiBoardToLocal(apiBoard);
+        const newList: BoardList = {
+          boards: [...boardList.boards, newBoard],
+          currentBoardId: newBoard.id,
+        };
+        pushToHistory(newList);
+        return newBoard;
+      }
+    } catch (error) {
+      console.error("Failed to create board via API:", error);
+      // Fallback to local
+    }
+    
+    // Local creation fallback
     const newBoard = createInitialBoard(name, templateColumns);
     const newList: BoardList = {
       boards: [...boardList.boards, newBoard],
@@ -316,7 +443,15 @@ export default function Home() {
     pushToHistory(newList);
   };
   
-  const deleteBoard = (boardId: string) => {
+  const deleteBoard = async (boardId: string) => {
+    try {
+      if (user) {
+        await deleteBoardApi(boardId);
+      }
+    } catch (error) {
+      console.error("Failed to delete board via API:", error);
+    }
+    
     const newBoards = boardList.boards.filter(b => b.id !== boardId);
     let newCurrentId = boardList.currentBoardId;
     if (boardId === boardList.currentBoardId) {
@@ -337,7 +472,7 @@ export default function Home() {
       ...original,
       id: `board-${Date.now()}`,
       name: `${original.name} (Copy)`,
-      createdAt: Date.now(),
+      createdAt: new Date(),
     };
     
     const newList: BoardList = {
@@ -389,6 +524,16 @@ export default function Home() {
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [moveCardOpen, setMoveCardOpen] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<{ card: CardType; columnId: string; index: number } | null>(null);
+  
+  // Auth state
+  const [user, setUser] = useState<UserType | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  
+  // Auth dialog state
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
@@ -626,62 +771,77 @@ export default function Home() {
     localStorage.setItem("trello-clone-dark", JSON.stringify(isDark));
   }, [isDark]);
 
-  // Load boardList from local storage
+  // Load boardList from API (if authenticated) or local storage
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    async function loadBoards() {
       try {
-        const parsed = JSON.parse(saved);
-        // Check if it's old format (single board) or new format (board list)
-        if (parsed.columns) {
-          // Old format - convert to new format
-          const oldBoard = parsed;
-          oldBoard.columns.forEach((col: Column) => {
-            col.cards.forEach((card: CardType) => {
-              card.createdAt = new Date(card.createdAt);
-              if (card.dueDate) card.dueDate = new Date(card.dueDate);
-              if (!card.assignee) card.assignee = undefined;
-              if (!card.attachments) card.attachments = [];
-              if (!card.checklists) card.checklists = [];
-              if (!card.comments) card.comments = [];
-            });
-          });
-          const newBoardList: BoardList = {
-            boards: [{ ...oldBoard, id: `board-${Date.now()}`, name: "My Board", createdAt: Date.now() }],
-            currentBoardId: oldBoard.id,
-          };
-          newBoardList.boards[0].id = `board-${Date.now()}`;
-          newBoardList.boards[0].createdAt = Date.now();
-          setBoardList(newBoardList);
-        } else {
-          // New format
-          const boardList = parsed as BoardList;
-          boardList.boards.forEach(board => {
-            board.createdAt = Number(board.createdAt);
-            board.columns.forEach(col => {
-              col.cards.forEach(card => {
-                card.createdAt = new Date(card.createdAt);
-                if (card.dueDate) card.dueDate = new Date(card.dueDate);
+        // Try to fetch boards from API
+        const apiBoards = await fetchBoards();
+        const boards = apiBoards.map(apiBoardToLocal);
+        setBoardList({
+          boards,
+          currentBoardId: boards[0]?.id || null
+        });
+      } catch {
+        // Fallback to localStorage if API fails (not authenticated)
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.columns) {
+              const oldBoard = parsed;
+              oldBoard.columns.forEach((col: Column) => {
+                col.cards.forEach((card: CardType) => {
+                  card.createdAt = new Date(card.createdAt);
+                  if (card.dueDate) card.dueDate = new Date(card.dueDate);
+                });
               });
-            });
-          });
-          setBoardList(boardList);
+              const newBoardList: BoardList = {
+                boards: [{ ...oldBoard, id: `board-${Date.now()}`, name: "My Board", createdAt: new Date() }],
+                currentBoardId: oldBoard.id,
+              };
+              newBoardList.boards[0].id = `board-${Date.now()}`;
+              setBoardList(newBoardList);
+            } else {
+              const boardList = parsed as BoardList;
+              boardList.boards.forEach(board => {
+                board.createdAt = new Date(board.createdAt);
+                board.columns.forEach(col => {
+                  col.cards.forEach(card => {
+                    card.createdAt = new Date(card.createdAt);
+                    if (card.dueDate) card.dueDate = new Date(card.dueDate);
+                  });
+                });
+              });
+              setBoardList(boardList);
+            }
+          } catch (e) {
+            const initial = createInitialBoard();
+            setBoardList({ boards: [initial], currentBoardId: initial.id });
+          }
+        } else {
+          const initial = createInitialBoard();
+          setBoardList({ boards: [initial], currentBoardId: initial.id });
         }
-      } catch (e) {
-        const initial = createInitialBoard();
-        setBoardList({ boards: [initial], currentBoardId: initial.id });
       }
-    } else {
-      const initial = createInitialBoard();
-      setBoardList({ boards: [initial], currentBoardId: initial.id });
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
+
+    loadBoards();
   }, []);
 
-  // Save boardList to local storage
+  // Save boardList to local storage (fallback for offline)
   useEffect(() => {
     if (isLoaded && boardList) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(boardList));
+      // Convert for localStorage (handle Date objects)
+      const boardListForStorage = {
+        boards: boardList.boards.map(board => ({
+          ...board,
+          createdAt: board.createdAt instanceof Date ? board.createdAt.getTime() : board.createdAt
+        })),
+        currentBoardId: boardList.currentBoardId
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(boardListForStorage));
     }
   }, [boardList, isLoaded]);
 
@@ -787,8 +947,17 @@ export default function Home() {
     pushToHistory({ ...boardList, boards: newBoards });
   };
 
-  const addCard = (columnId: string) => {
+  const addCard = async (columnId: string) => {
     if (!newCardTitle.trim() || !currentBoard) return;
+
+    try {
+      if (user) {
+        // Use API when signed in
+        await createCardApi(columnId, { title: newCardTitle.trim() });
+      }
+    } catch (error) {
+      console.error("Failed to create card via API:", error);
+    }
 
     const column = currentBoard.columns.find(col => col.id === columnId);
     const newCard: CardType = {
@@ -820,12 +989,20 @@ export default function Home() {
     setIsAddCardOpen(null);
   };
 
-  const deleteCard = (columnId: string, cardId: string) => {
+  const deleteCard = async (columnId: string, cardId: string) => {
     if (!currentBoard) return;
 
     const column = currentBoard.columns.find(col => col.id === columnId);
     const card = column?.cards.find(c => c.id === cardId);
     if (!card) return;
+
+    try {
+      if (user) {
+        await deleteCardApi(cardId);
+      }
+    } catch (error) {
+      console.error("Failed to delete card via API:", error);
+    }
 
     // Archive the card instead of permanent delete
     updateCurrentBoard(board => ({
@@ -987,8 +1164,16 @@ export default function Home() {
     setMoveCardOpen(null);
   };
 
-  const addColumn = () => {
+  const addColumn = async () => {
     if (!newColumnTitle.trim() || !currentBoard) return;
+
+    try {
+      if (user) {
+        await createColumnApi(currentBoard.id, newColumnTitle.trim());
+      }
+    } catch (error) {
+      console.error("Failed to create column via API:", error);
+    }
 
     const newColumn: Column = {
       id: `col-${Date.now()}`,
@@ -1004,8 +1189,16 @@ export default function Home() {
     setNewColumnTitle("");
   };
 
-  const deleteColumn = (columnId: string) => {
+  const deleteColumn = async (columnId: string) => {
     if (!currentBoard) return;
+
+    try {
+      if (user) {
+        await deleteColumnApi(columnId);
+      }
+    } catch (error) {
+      console.error("Failed to delete column via API:", error);
+    }
 
     updateCurrentBoard(board => ({
       ...board,
@@ -1674,6 +1867,141 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* Auth UI */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{user.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                      setUser(null);
+                      // Reload boards from localStorage after sign out
+                      const saved = localStorage.getItem(STORAGE_KEY);
+                      if (saved) {
+                        try {
+                          const parsed = JSON.parse(saved);
+                          const boardList = parsed as BoardList;
+                          boardList.boards.forEach(board => {
+                            board.createdAt = new Date(board.createdAt);
+                            board.columns.forEach(col => {
+                              col.cards.forEach(card => {
+                                card.createdAt = new Date(card.createdAt);
+                                if (card.dueDate) card.dueDate = new Date(card.dueDate);
+                              });
+                            });
+                          });
+                          setBoardList(boardList);
+                        } catch (e) {
+                          const initial = createInitialBoard();
+                          setBoardList({ boards: [initial], currentBoardId: initial.id });
+                        }
+                      }
+                    } catch (error) {
+                      console.error("Sign out failed:", error);
+                    }
+                  }}
+                  title="Sign out"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : (
+              <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <LogIn className="h-4 w-4" />
+                    Sign In
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{authMode === "signin" ? "Sign In" : "Create Account"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {authMode === "signup" && (
+                      <div>
+                        <label className="text-sm font-medium">Name</label>
+                        <Input
+                          value={authForm.name}
+                          onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                          placeholder="Your name"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium">Email</label>
+                      <Input
+                        type="email"
+                        value={authForm.email}
+                        onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                        placeholder="email@example.com"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Password</label>
+                      <Input
+                        type="password"
+                        value={authForm.password}
+                        onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="mt-1"
+                      />
+                    </div>
+                    {authError && (
+                      <p className="text-sm text-red-500">{authError}</p>
+                    )}
+                    <Button
+                      className="w-full"
+                      onClick={async () => {
+                        setAuthError(null);
+                        try {
+                          if (authMode === "signin") {
+                            await signIn(authForm.email, authForm.password);
+                          } else {
+                            await signUp(authForm.name, authForm.email, authForm.password);
+                          }
+                          // Refresh boards after auth
+                          const apiBoards = await fetchBoards();
+                          const boards = apiBoards.map(apiBoardToLocal);
+                          setBoardList({
+                            boards,
+                            currentBoardId: boards[0]?.id || null
+                          });
+                          setShowAuthDialog(false);
+                          setAuthForm({ name: "", email: "", password: "" });
+                        } catch (error) {
+                          setAuthError(error instanceof Error ? error.message : "Authentication failed");
+                        }
+                      }}
+                    >
+                      {authMode === "signin" ? "Sign In" : "Create Account"}
+                    </Button>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        className="text-sm text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setAuthMode(authMode === "signin" ? "signup" : "signin");
+                          setAuthError(null);
+                        }}
+                      >
+                        {authMode === "signin"
+                          ? "Don't have an account? Sign up"
+                          : "Already have an account? Sign in"}
+                      </button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
 
