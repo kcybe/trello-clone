@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -265,6 +265,7 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filterLabel, setFilterLabel] = useState<string>("");
   const [filterMember, setFilterMember] = useState<string>("");
+  const [isCompact, setIsCompact] = useState(false);
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
@@ -1011,6 +1012,16 @@ export default function Home() {
             <Keyboard className="h-5 w-5" />
           </Button>
           
+          {/* Compact view toggle */}
+          <Button 
+            variant={isCompact ? "default" : "ghost"} 
+            size="icon" 
+            onClick={() => setIsCompact(!isCompact)}
+            title={isCompact ? "Expand view" : "Compact view"}
+          >
+            <Minimize2 className="h-5 w-5" />
+          </Button>
+          
           {/* Dark mode toggle */}
           <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -1083,9 +1094,9 @@ export default function Home() {
                               snapshot.isDragging ? "shadow-lg rotate-2" : ""
                             }`}
                           >
-                            <CardContent className="p-3">
+                            <CardContent className={`${isCompact ? "p-2" : "p-3"}`}>
                               {/* Labels */}
-                              {card.labels && card.labels.length > 0 && (
+                              {card.labels && card.labels.length > 0 && !isCompact && (
                                 <div className="flex flex-wrap gap-1 mb-2">
                                   {card.labels.map((label) => (
                                     <span
@@ -1099,18 +1110,17 @@ export default function Home() {
                               )}
                               
                               <div className="flex items-start justify-between gap-2">
-                                <span className="text-sm font-medium">{card.title}</span>
-                                <div className="flex gap-1">
+                                <span className={`${isCompact ? "text-xs" : "text-sm"} font-medium`}>{card.title}</span>
+                                {isCompact && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6"
+                                    className="h-5 w-5 -mt-1"
                                     onClick={() => openEditCard(card, column.id)}
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
+                                )}
                                     size="icon"
                                     className="h-6 w-6 text-muted-foreground"
                                     onClick={() => archiveCard(column.id, card.id)}
