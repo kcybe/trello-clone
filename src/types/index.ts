@@ -42,6 +42,7 @@ export type Card = {
   createdAt: Date;
   comments?: Comment[];
   archived?: boolean;
+  color?: string;
 };
 
 export type Column = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -278,6 +278,7 @@ export default function Home() {
     dueDate: string;
     columnId: string;
     comments: Comment[];
+    color: string;
   } | null>(null);
 
   // New label input
@@ -684,7 +685,8 @@ export default function Home() {
                       attachments: editingCard.attachments,
                       checklists: editingCard.checklists,
                       dueDate: editingCard.dueDate ? new Date(editingCard.dueDate) : null,
-                      comments: editingCard.comments
+                      comments: editingCard.comments,
+                      color: editingCard.color || undefined
                     }
                   : card
               ),
@@ -861,6 +863,7 @@ export default function Home() {
       dueDate: card.dueDate ? new Date(card.dueDate).toISOString().split("T")[0] : "",
       columnId,
       comments: card.comments || [],
+      color: card.color || "",
     });
   };
 
@@ -1076,7 +1079,7 @@ export default function Home() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`cursor-grab active:cursor-grabbing ${
+                            className={`cursor-grab active:cursor-grabbing ${card.color || ""} ${
                               snapshot.isDragging ? "shadow-lg rotate-2" : ""
                             }`}
                           >
@@ -1740,6 +1743,37 @@ export default function Home() {
                 >
                   Add Comment
                 </Button>
+              </div>
+
+              {/* Card color */}
+              <div>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Palette className="h-4 w-4" />
+                  Card Color
+                </label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    { name: "None", value: "" },
+                    { name: "Red", value: "bg-red-100 dark:bg-red-900/30" },
+                    { name: "Orange", value: "bg-orange-100 dark:bg-orange-900/30" },
+                    { name: "Yellow", value: "bg-yellow-100 dark:bg-yellow-900/30" },
+                    { name: "Green", value: "bg-green-100 dark:bg-green-900/30" },
+                    { name: "Blue", value: "bg-blue-100 dark:bg-blue-900/30" },
+                    { name: "Purple", value: "bg-purple-100 dark:bg-purple-900/30" },
+                    { name: "Pink", value: "bg-pink-100 dark:bg-pink-900/30" },
+                  ].map(color => (
+                    <button
+                      key={color.name}
+                      onClick={() => setEditingCard({ ...editingCard, color: color.value })}
+                      className={`w-8 h-8 rounded-full border-2 ${
+                        editingCard.color === color.value ? "border-primary" : "border-transparent"
+                      } ${color.value || "bg-muted"}`}
+                      title={color.name}
+                    >
+                      {color.name === "None" && <X className="h-4 w-4 mx-auto text-muted-foreground" />}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Due date */}
