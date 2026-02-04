@@ -267,6 +267,7 @@ export default function Home() {
   const [filterMember, setFilterMember] = useState<string>("");
   const [isCompact, setIsCompact] = useState(false);
   const [moveCardOpen, setMoveCardOpen] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<{ card: CardType; columnId: string; index: number } | null>(null);
   
   // Edit card state
   const [editingCard, setEditingCard] = useState<{
@@ -394,6 +395,19 @@ export default function Home() {
       }
       if (e.key === "Escape") {
         setShowShortcuts(false);
+        setMoveCardOpen(null);
+      }
+      
+      // Card navigation with arrows
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        navigateCards(e.key);
+      }
+      
+      // Edit selected card
+      if (e.key === "Enter" && selectedCard) {
+        e.preventDefault();
+        openEditCard(selectedCard.card, selectedCard.columnId);
       }
     };
 
@@ -876,6 +890,34 @@ export default function Home() {
     return { checked, total: checklist.items.length };
   };
 
+  const navigateCards = (key: string) => {
+    if (!board) return;
+    
+    // Flatten all cards with their column info
+    const allCards: { card: CardType; columnId: string; index: number }[] = [];
+    board.columns.forEach(col => {
+      col.cards.forEach((card, idx) => {
+        allCards.push({ card, columnId: col.id, index: idx });
+      });
+    });
+    
+    if (allCards.length === 0) return;
+    
+    const currentIndex = selectedCard 
+      ? allCards.findIndex(c => c.card.id === selectedCard.card.id)
+      : -1;
+    
+    let newIndex = currentIndex;
+    
+    if (key === "ArrowDown" || key === "ArrowRight") {
+      newIndex = currentIndex < allCards.length - 1 ? currentIndex + 1 : 0;
+    } else if (key === "ArrowUp" || key === "ArrowLeft") {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : allCards.length - 1;
+    }
+    
+    setSelectedCard(allCards[newIndex]);
+  };
+
   const openEditCard = (card: CardType, columnId: string) => {
     setEditingCard({
       id: card.id,
@@ -1114,9 +1156,10 @@ export default function Home() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
+                            onClick={() => setSelectedCard({ card, columnId: column.id, index })}
                             className={`cursor-grab active:cursor-grabbing ${card.color || ""} ${
                               snapshot.isDragging ? "shadow-lg rotate-2" : ""
-                            }`}
+                            } ${selectedCard?.card.id === card.id ? "ring-2 ring-primary" : ""}`}
                           >
                             <CardContent className={`${isCompact ? "p-2" : "p-3"}`}>
                               {/* Labels */}
