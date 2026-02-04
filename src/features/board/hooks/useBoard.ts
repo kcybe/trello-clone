@@ -4,10 +4,12 @@ import {
   BoardList,
   Column,
   Card,
+  Card as CardType,
   ApiBoard,
   ApiColumn,
   ApiCard,
   BoardTemplate,
+  ActivityType,
 } from '../types';
 
 // API functions
@@ -154,24 +156,37 @@ interface UseBoardReturn {
   boardHistory: BoardList[];
   historyIndex: number;
   isLoaded: boolean;
-  
+
   // Derived
   currentBoard: Board | null;
-  
+
   // Board CRUD
   createBoard: (name: string, templateColumns?: string[]) => Promise<Board>;
   switchBoard: (boardId: string) => void;
   deleteBoard: (boardId: string) => void;
   duplicateBoard: (boardId: string) => void;
-  
+
   // Column CRUD
   addColumn: (name: string) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
-  
+
+  // Card CRUD
+  addCard: (columnId: string, title: string) => void;
+  deleteCard: (columnId: string, cardId: string) => void;
+  archiveCard: (columnId: string, cardId: string) => void;
+  unarchiveCard: (columnId: string, cardId: string) => void;
+  permanentlyDeleteCard: (columnId: string, cardId: string) => void;
+  duplicateCard: (columnId: string, cardId: string) => void;
+  moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => void;
+  updateCard: (columnId: string, cardId: string, updates: Partial<Card>) => void;
+
+  // Export
+  exportBoard: () => void;
+
   // Undo/Redo
   undo: () => void;
   redo: () => void;
-  
+
   // Update helper
   updateCurrentBoard: (updateFn: (board: Board) => Board) => void;
 }
@@ -369,6 +384,217 @@ export function useBoard(user: { id: string } | null): UseBoardReturn {
     },
     [currentBoard, updateCurrentBoard, user]
   );
+
+  // Card CRUD
+  const addCard = useCallback((columnId: string, title: string) => {
+    if (!currentBoard) return;
+
+    const newCard: CardType = {
+      id: `card-${Date.now()}`,
+      title: title.trim(),
+      createdAt: new Date(),
+      labels: [],
+      assignee: undefined,
+      attachments: [],
+      checklists: [],
+      dueDate: null,
+      comments: [],
+    };
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId ? { ...col, cards: [...col.cards, newCard] } : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const deleteCard = useCallback((columnId: string, cardId: string) => {
+    if (!currentBoard) return;
+
+    const column = currentBoard.columns.find((col) => col.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: col.cards.filter((c) => c.id !== cardId),
+              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+            }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const archiveCard = useCallback((columnId: string, cardId: string) => {
+    if (!currentBoard) return;
+
+    const column = currentBoard.columns.find((col) => col.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: col.cards.filter((c) => c.id !== cardId),
+              archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
+            }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const unarchiveCard = useCallback((columnId: string, cardId: string) => {
+    if (!currentBoard) return;
+
+    const column = currentBoard.columns.find((col) => col.id === columnId);
+    const card = column?.archivedCards?.find((c) => c.id === cardId);
+    if (!card) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: [...col.cards, { ...card, archived: false }],
+              archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [],
+            }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const permanentlyDeleteCard = useCallback((columnId: string, cardId: string) => {
+    if (!currentBoard) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? { ...col, archivedCards: col.archivedCards?.filter((c) => c.id !== cardId) || [] }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const duplicateCard = useCallback((columnId: string, cardId: string) => {
+    if (!currentBoard) return;
+
+    const column = currentBoard.columns.find((col) => col.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    const cardIndex = column?.cards.findIndex((c) => c.id === cardId);
+    const newCard: CardType = {
+      ...card,
+      id: `card-${Date.now()}`,
+      title: `${card.title} (Copy)`,
+      createdAt: new Date(),
+      comments: [],
+    };
+
+    if (cardIndex === undefined || cardIndex === -1) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: [
+                ...col.cards.slice(0, cardIndex + 1),
+                newCard,
+                ...col.cards.slice(cardIndex + 1),
+              ],
+            }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const moveCard = useCallback((cardId: string, fromColumnId: string, toColumnId: string) => {
+    if (!currentBoard || fromColumnId === toColumnId) return;
+
+    const fromColumn = currentBoard.columns.find((col) => col.id === fromColumnId);
+    const card = fromColumn?.cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) => {
+        if (col.id === fromColumnId) {
+          return { ...col, cards: col.cards.filter((c) => c.id !== cardId) };
+        }
+        if (col.id === toColumnId) {
+          return { ...col, cards: [...col.cards, card] };
+        }
+        return col;
+      }),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  const updateCard = useCallback((columnId: string, cardId: string, updates: Partial<Card>) => {
+    if (!currentBoard) return;
+
+    updateCurrentBoard((board) => ({
+      ...board,
+      columns: board.columns.map((col) =>
+        col.id === columnId
+          ? {
+              ...col,
+              cards: col.cards.map((card) =>
+                card.id === cardId ? { ...card, ...updates } : card
+              ),
+            }
+          : col
+      ),
+    }));
+  }, [currentBoard, updateCurrentBoard]);
+
+  // Export board
+  const exportBoard = useCallback(() => {
+    if (!currentBoard) return;
+
+    const exportData = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      board: {
+        id: currentBoard.id,
+        name: currentBoard.name,
+        columns: currentBoard.columns.map((col) => ({
+          ...col,
+          cards: col.cards.map((card) => ({
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
+            createdAt: new Date(card.createdAt).toISOString(),
+            archived: card.archived || false,
+          })),
+          archivedCards: col.archivedCards?.map((card) => ({
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
+            createdAt: new Date(card.createdAt).toISOString(),
+            archived: true,
+          })) || [],
+        })),
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentBoard.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [currentBoard]);
 
   // Load boards from API or localStorage
   useEffect(() => {

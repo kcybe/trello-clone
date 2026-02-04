@@ -63,6 +63,7 @@ export function BoardHeader({
   onExportBoard,
   onToggleActivity,
   onShowShortcuts,
+  onOpenShare,
   onSignIn,
   onSignOut,
   onUndo,
@@ -432,6 +433,19 @@ export function BoardHeader({
         >
           <RotateCcw className="h-5 w-5" />
         </Button>
+
+        {/* Share button */}
+        {onOpenShare && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenShare}
+            className="gap-1"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        )}
       </div>
     </header>
   );

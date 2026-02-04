@@ -2,47 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Board,
-  Column,
-  Card as CardType,
-  ViewMode,
-  SortBy,
-  SortOrder,
-  User,
-} from "../features/board/types";
-import {
-  useBoard,
-  useCards,
-  useActivities,
-  apiBoardToLocal,
-  BOARD_TEMPLATES,
-} from "../features/board/hooks";
-import { BoardHeader } from "../features/board/components/BoardHeader";
-import { BoardColumn } from "../features/board/components/BoardColumn";
-import { CardModal } from "../features/board/components/CardModal";
-import { BoardFooter } from "../features/board/components/BoardFooter";
+import { Board, Column, Card as CardType, ViewMode, SortBy, SortOrder, User } from "@/features/board/types";
+import { useBoard, useCards, useActivities } from "@/features/board/hooks";
+import { BoardHeader } from "@/features/board/components/BoardHeader";
+import { BoardColumn } from "@/features/board/components/BoardColumn";
+import { CardModal } from "@/features/board/components/CardModal";
+import { BoardFooter } from "@/features/board/components/BoardFooter";
+import { ShortcutsModal, AddColumnDialog } from "@/features/board/components/BoardDialogs";
 import ActivityPanel from "@/components/ActivityPanel";
-
-// Keyboard shortcuts
-const SHORTCUTS = {
-  n: "New card",
-  f: "Search",
-  "/": "Focus search",
-  Escape: "Close dialog",
-  ArrowUp: "Navigate up",
-  ArrowDown: "Navigate down",
-};
 
 export default function Home() {
   // Auth state
@@ -71,9 +38,6 @@ export default function Home() {
 
   // Notification settings
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [reminder1Day, setReminder1Day] = useState(true);
-  const [reminder1Hour, setReminder1Hour] = useState(true);
-  const [overdueAlerts, setOverdueAlerts] = useState(true);
 
   // Activity state
   const [showActivity, setShowActivity] = useState(false);
@@ -82,7 +46,6 @@ export default function Home() {
   // Board state
   const {
     boardList,
-    boardHistory,
     historyIndex,
     isLoaded,
     currentBoard,
@@ -140,10 +103,9 @@ export default function Home() {
     setColor,
     setDueDate,
     getChecklistProgress,
-    clearCommentForm,
   } = useCards();
 
-  // Load dark mode preference
+  // Load dark mode
   useEffect(() => {
     const savedDark = localStorage.getItem("trello-clone-dark");
     if (savedDark) {
@@ -211,24 +173,24 @@ export default function Home() {
       if (!destination || !currentBoard) return;
       if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-      const sourceColumn = currentBoard.columns.find((col: Column) => col.id === source.droppableId);
-      const destColumn = currentBoard.columns.find((col: Column) => col.id === destination.droppableId);
-
-      if (!sourceColumn || !destColumn) return;
-
       const newBoards = boardList.boards.map((b: Board) => {
         if (b.id !== boardList.currentBoardId) return b;
 
         let newColumns = b.columns;
 
         if (source.droppableId === destination.droppableId) {
-          const newCards = Array.from(sourceColumn.cards);
+          const column = b.columns.find((col: Column) => col.id === source.droppableId);
+          if (!column) return b;
+          const newCards = Array.from(column.cards);
           const [removed] = newCards.splice(source.index, 1);
           newCards.splice(destination.index, 0, removed);
           newColumns = b.columns.map((col: Column) =>
             col.id === source.droppableId ? { ...col, cards: newCards } : col
           );
         } else {
+          const sourceColumn = b.columns.find((col: Column) => col.id === source.droppableId);
+          const destColumn = b.columns.find((col: Column) => col.id === destination.droppableId);
+          if (!sourceColumn || !destColumn) return b;
           const sourceCards = Array.from(sourceColumn.cards);
           const destCards = Array.from(destColumn.cards);
           const [removed] = sourceCards.splice(source.index, 1);
@@ -253,7 +215,7 @@ export default function Home() {
 
   // Add card
   const handleAddCard = useCallback(
-    async (columnId: string) => {
+    (columnId: string) => {
       if (!newCardTitle.trim() || !currentBoard) return;
 
       const column = currentBoard.columns.find((col: Column) => col.id === columnId);
@@ -280,7 +242,6 @@ export default function Home() {
         toColumnId: columnId,
         toColumnName: column?.title,
       });
-
       setNewCardTitle("");
       setIsAddCardOpen(null);
     },
@@ -291,7 +252,6 @@ export default function Home() {
   const handleDeleteCard = useCallback(
     (columnId: string, cardId: string) => {
       if (!currentBoard) return;
-
       const column = currentBoard.columns.find((col: Column) => col.id === columnId);
       const card = column?.cards.find((c: CardType) => c.id === cardId);
       if (!card) return;
@@ -316,7 +276,6 @@ export default function Home() {
   const handleArchiveCard = useCallback(
     (columnId: string, cardId: string) => {
       if (!currentBoard) return;
-
       const column = currentBoard.columns.find((col: Column) => col.id === columnId);
       const card = column?.cards.find((c: CardType) => c.id === cardId);
       if (!card) return;
@@ -327,7 +286,7 @@ export default function Home() {
           col.id === columnId
             ? {
                 ...col,
-                cards: col.cards.filter((card: CardType) => card.id !== cardId),
+                cards: col.cards.filter((c: CardType) => c.id !== cardId),
                 archivedCards: [...(col.archivedCards || []), { ...card, archived: true }],
               }
             : col
@@ -346,7 +305,6 @@ export default function Home() {
   const handleUnarchiveCard = useCallback(
     (columnId: string, cardId: string) => {
       if (!currentBoard) return;
-
       const column = currentBoard.columns.find((col: Column) => col.id === columnId);
       const card = column?.archivedCards?.find((c: CardType) => c.id === cardId);
       if (!card) return;
@@ -376,9 +334,6 @@ export default function Home() {
   const handlePermanentlyDeleteCard = useCallback(
     (columnId: string, cardId: string) => {
       if (!currentBoard) return;
-
-      const column = currentBoard.columns.find((col: Column) => col.id === columnId);
-
       updateCurrentBoard((board: Board) => ({
         ...board,
         columns: board.columns.map((col: Column) =>
@@ -395,11 +350,11 @@ export default function Home() {
   const handleDuplicateCard = useCallback(
     (columnId: string, cardId: string) => {
       if (!currentBoard) return;
-
       const column = currentBoard.columns.find((col: Column) => col.id === columnId);
       const card = column?.cards.find((c: CardType) => c.id === cardId);
       if (!card) return;
 
+      const cardIndex = column?.cards.findIndex((c: CardType) => c.id === cardId);
       const newCard: CardType = {
         ...card,
         id: `card-${Date.now()}`,
@@ -408,7 +363,6 @@ export default function Home() {
         comments: [],
       };
 
-      const cardIndex = column?.cards.findIndex((c: CardType) => c.id === cardId);
       if (cardIndex === undefined || cardIndex === -1) return;
 
       updateCurrentBoard((board: Board) => ({
@@ -417,11 +371,7 @@ export default function Home() {
           col.id === columnId
             ? {
                 ...col,
-                cards: [
-                  ...col.cards.slice(0, cardIndex + 1),
-                  newCard,
-                  ...col.cards.slice(cardIndex + 1),
-                ],
+                cards: [...col.cards.slice(0, cardIndex + 1), newCard, ...col.cards.slice(cardIndex + 1)],
               }
             : col
         ),
@@ -465,7 +415,6 @@ export default function Home() {
         toColumnId,
         toColumnName: toColumn?.title,
       });
-
       setMoveCardOpen(null);
     },
     [currentBoard, updateCurrentBoard, addActivity]
@@ -540,9 +489,8 @@ export default function Home() {
     }));
 
     addActivity("card_edited", editingCard.id, editingCard.title, {
-      description: `Changed: title, description`,
+      description: "Changed: title, description",
     });
-
     closeEditCard();
   }, [editingCard, currentBoard, updateCurrentBoard, addActivity, closeEditCard]);
 
@@ -552,7 +500,6 @@ export default function Home() {
       alert("This browser does not support desktop notifications");
       return false;
     }
-
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
       setNotificationsEnabled(true);
@@ -561,37 +508,6 @@ export default function Home() {
     return false;
   };
 
-  // Navigate cards
-  const navigateCards = useCallback(
-    (key: string) => {
-      if (!currentBoard) return;
-
-      const allCards: { card: CardType; columnId: string; index: number }[] = [];
-      currentBoard.columns.forEach((col: Column) => {
-        col.cards.forEach((card: CardType, idx: number) => {
-          allCards.push({ card, columnId: col.id, index: idx });
-        });
-      });
-
-      if (allCards.length === 0) return;
-
-      const currentIndex = selectedCard
-        ? allCards.findIndex((c) => c.card.id === selectedCard.card.id)
-        : -1;
-
-      let newIndex = currentIndex;
-
-      if (key === "ArrowDown" || key === "ArrowRight") {
-        newIndex = currentIndex < allCards.length - 1 ? currentIndex + 1 : 0;
-      } else if (key === "ArrowUp" || key === "ArrowLeft") {
-        newIndex = currentIndex > 0 ? currentIndex - 1 : allCards.length - 1;
-      }
-
-      setSelectedCard(allCards[newIndex]);
-    },
-    [currentBoard, selectedCard]
-  );
-
   // Loading state
   if (!isLoaded || !currentBoard) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
@@ -599,7 +515,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background transition-colors">
-      {/* Header */}
       <BoardHeader
         currentBoard={currentBoard}
         boardList={boardList}
@@ -629,41 +544,16 @@ export default function Home() {
         onExportBoard={exportBoard}
         onToggleActivity={() => setShowActivity(!showActivity)}
         onShowShortcuts={() => setShowShortcuts(true)}
-        onOpenTemplates={() => setIsTemplatesOpen(true)}
         onSignIn={() => {}}
         onSignOut={() => setUser(null)}
         onUndo={undo}
         onRedo={redo}
         historyIndex={historyIndex}
-        boardHistoryLength={boardHistory.length}
+        boardHistoryLength={boardList.history?.length || 0}
       />
 
-      {/* Keyboard shortcuts modal */}
-      {showShortcuts && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowShortcuts(false)}
-        >
-          <div className="bg-background rounded-lg p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Keyboard Shortcuts</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {Object.entries(SHORTCUTS).map(([key, desc]) => (
-                <div key={key} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{desc}</span>
-                  <kbd className="bg-muted px-2 py-0.5 rounded text-xs font-mono">{key}</kbd>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
-      {/* Board */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex gap-4 overflow-x-auto p-4 h-[calc(100vh-80px)]">
           {currentBoard.columns.map((column: Column) => (
@@ -691,41 +581,20 @@ export default function Home() {
             />
           ))}
 
-          {/* Add column */}
-          <div className="flex-shrink-0 w-72">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full justify-start">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add column
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Column</DialogTitle>
-                </DialogHeader>
-                <Input
-                  placeholder="Column title..."
-                  value={newColumnTitle}
-                  onChange={(e) => setNewColumnTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addColumn(newColumnTitle)}
-                />
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => setNewColumnTitle("")}>
-                    Cancel
-                  </Button>
-                  <Button onClick={() => addColumn(newColumnTitle)}>Add</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <AddColumnDialog
+            newColumnTitle={newColumnTitle}
+            onSetNewColumnTitle={setNewColumnTitle}
+            onAddColumn={(title) => {
+              addColumn(title);
+              setNewColumnTitle("");
+            }}
+            onClear={() => setNewColumnTitle("")}
+          />
         </div>
       </DragDropContext>
 
-      {/* Footer */}
       <BoardFooter currentBoard={currentBoard} />
 
-      {/* Card Modal */}
       <CardModal
         isOpen={!!editingCard}
         editingCard={editingCard}
@@ -770,7 +639,6 @@ export default function Home() {
         getChecklistProgress={getChecklistProgress}
       />
 
-      {/* Activity Panel */}
       {showActivity && <ActivityPanel activities={activities} onClose={() => setShowActivity(false)} />}
     </div>
   );
