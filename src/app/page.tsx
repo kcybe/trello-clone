@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -303,6 +303,132 @@ export default function Home() {
   // Comment inputs
   const [newCommentAuthor, setNewCommentAuthor] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
+
+  // Notification settings
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [reminder1Day, setReminder1Day] = useState(true);
+  const [reminder1Hour, setReminder1Hour] = useState(true);
+  const [overdueAlerts, setOverdueAlerts] = useState(true);
+  const [lastNotificationCheck, setLastNotificationCheck] = useState<Date | null>(null);
+
+  // Load notification settings from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("trello-clone-notifications");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setNotificationsEnabled(parsed.enabled ?? false);
+        setReminder1Day(parsed.reminder1Day ?? true);
+        setReminder1Hour(parsed.reminder1Hour ?? true);
+        setOverdueAlerts(parsed.overdueAlerts ?? true);
+      } catch (e) {
+        console.error("Failed to load notification settings", e);
+      }
+    }
+  }, []);
+
+  // Save notification settings to localStorage
+  useEffect(() => {
+    localStorage.setItem("trello-clone-notifications", JSON.stringify({
+      enabled: notificationsEnabled,
+      reminder1Day,
+      reminder1Hour,
+      overdueAlerts,
+    }));
+  }, [notificationsEnabled, reminder1Day, reminder1Hour, overdueAlerts]);
+
+  // Request notification permission and enable notifications
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      alert("This browser does not support desktop notifications");
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      setNotificationsEnabled(true);
+      return true;
+    }
+    return false;
+  };
+
+  // Check due dates and send notifications
+  const checkDueDates = useCallback(() => {
+    if (!board || !notificationsEnabled) return;
+
+    const now = new Date();
+    const cards = board.columns.flatMap(col => col.cards).filter(card => card.dueDate);
+
+    const notifications: { title: string; body: string; tag: string }[] = [];
+
+    cards.forEach(card => {
+      const dueDate = new Date(card.dueDate!);
+      const timeDiff = dueDate.getTime() - now.getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+      // Overdue alerts
+      if (overdueAlerts && dueDate < now && timeDiff > -24 * 60 * 60 * 1000) {
+        const tag = `overdue-${card.id}`;
+        notifications.push({
+          title: "⚠️ Overdue Card",
+          body: `"${card.title}" was due ${Math.floor(-timeDiff / (1000 * 60 * 60))} hours ago`,
+          tag,
+        });
+      }
+
+      // 1 day before reminder
+      if (reminder1Day && hoursDiff > 0 && hoursDiff <= 24) {
+        const tag = `1day-${card.id}`;
+        notifications.push({
+          title: "📅 Due Tomorrow",
+          body: `"${card.title}" is due tomorrow`,
+          tag,
+        });
+      }
+
+      // 1 hour before reminder
+      if (reminder1Hour && hoursDiff > 0 && hoursDiff <= 1) {
+        const tag = `1hour-${card.id}`;
+        notifications.push({
+          title: "⏰ Due Soon",
+          body: `"${card.title}" is due in less than an hour`,
+          tag,
+        });
+      }
+    });
+
+    // Send notifications
+    notifications.forEach(notif => {
+      if (Notification.permission === "granted") {
+        new Notification(notif.title, {
+          body: notif.body,
+          tag: notif.tag,
+          icon: "/favicon.ico",
+        });
+      }
+    });
+
+    setLastNotificationCheck(now);
+  }, [board, notificationsEnabled, reminder1Day, reminder1Hour, overdueAlerts]);
+
+  // Run checkDueDates on mount and periodically
+  useEffect(() => {
+    if (notificationsEnabled) {
+      checkDueDates();
+    }
+  }, [notificationsEnabled, board]);
+
+  // Check every minute for due date alerts
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+
+    const interval = setInterval(() => {
+      checkDueDates();
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [notificationsEnabled, checkDueDates]);
 
   // Load dark mode preference
   useEffect(() => {
@@ -645,11 +771,14 @@ export default function Home() {
       comments: [],
     };
 
+    const targetColumn = board.columns.find(col => col.id === columnId);
+    if (!targetColumn) return;
+
     pushToHistory({
       ...board,
       columns: board.columns.map((col) =>
         col.id === columnId
-          ? { ...col, cards: [...col.cards.slice(0, column.cards.findIndex(c => c.id === cardId) + 1), newCard, ...col.cards.slice(column.cards.findIndex(c => c.id === cardId) + 1)] }
+          ? { ...col, cards: [...col.cards.slice(0, targetColumn.cards.findIndex(c => c.id === cardId) + 1), newCard, ...col.cards.slice(targetColumn.cards.findIndex(c => c.id === cardId) + 1)] }
           : col
       ),
     });
@@ -1122,6 +1251,78 @@ export default function Home() {
             <Minimize2 className="h-5 w-5" />
           </Button>
           
+          {/* Notification bell */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setNotificationSettingsOpen(!notificationSettingsOpen)}
+              title="Notification settings"
+            >
+              {notificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+            </Button>
+            {notificationSettingsOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-50 min-w-64 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium">Notifications</h3>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setNotificationSettingsOpen(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {!notificationsEnabled ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={requestNotificationPermission}
+                  >
+                    Enable Notifications
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={reminder1Day}
+                        onChange={(e) => setReminder1Day(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Remind 1 day before</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={reminder1Hour}
+                        onChange={(e) => setReminder1Hour(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Remind 1 hour before</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={overdueAlerts}
+                        onChange={(e) => setOverdueAlerts(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Alert for overdue cards</span>
+                    </label>
+                    <div className="pt-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground"
+                        onClick={checkDueDates}
+                      >
+                        Check now
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Dark mode toggle */}
           <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -1217,7 +1418,7 @@ export default function Home() {
                               
                               <div className="flex items-start justify-between gap-2">
                                 <span className={`${isCompact ? "text-xs" : "text-sm"} font-medium`}>{card.title}</span>
-                                {isCompact && (
+                                {isCompact ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -1226,51 +1427,63 @@ export default function Home() {
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
-                                )}
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground"
-                                    onClick={() => archiveCard(column.id, card.id)}
-                                    title="Archive card"
-                                  >
-                                    <Archive className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground"
-                                    onClick={() => duplicateCard(column.id, card.id)}
-                                    title="Duplicate card"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                  
-                                  {/* Move card dropdown */}
-                                  <div className="relative">
+                                ) : (
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => openEditCard(card, column.id)}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className="h-6 w-6 text-muted-foreground"
-                                      onClick={() => setMoveCardOpen(moveCardOpen === card.id ? null : card.id)}
-                                      title="Move card"
+                                      onClick={() => archiveCard(column.id, card.id)}
+                                      title="Archive card"
                                     >
-                                      <ArrowRight className="h-3 w-3" />
+                                      <Archive className="h-3 w-3" />
                                     </Button>
-                                    {moveCardOpen === card.id && (
-                                      <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-10 min-w-32">
-                                        <div className="text-xs text-muted-foreground px-2 py-1">Move to:</div>
-                                        {board.columns.filter(col => col.id !== column.id).map(col => (
-                                          <button
-                                            key={col.id}
-                                            onClick={() => moveCard(card.id, column.id, col.id)}
-                                            className="w-full text-left px-2 py-1 text-sm hover:bg-muted"
-                                          >
-                                            {col.title}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground"
+                                      onClick={() => duplicateCard(column.id, card.id)}
+                                      title="Duplicate card"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                    
+                                    {/* Move card dropdown */}
+                                    <div className="relative">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground"
+                                        onClick={() => setMoveCardOpen(moveCardOpen === card.id ? null : card.id)}
+                                        title="Move card"
+                                      >
+                                        <ArrowRight className="h-3 w-3" />
+                                      </Button>
+                                      {moveCardOpen === card.id && board && (
+                                        <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-10 min-w-32">
+                                          <div className="text-xs text-muted-foreground px-2 py-1">Move to:</div>
+                                          {board.columns.filter(col => col.id !== column.id).map(col => (
+                                            <button
+                                              key={col.id}
+                                              onClick={() => moveCard(card.id, column.id, col.id)}
+                                              className="w-full text-left px-2 py-1 text-sm hover:bg-muted"
+                                            >
+                                              {col.title}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
 
                               {/* Member avatar */}
@@ -1708,9 +1921,7 @@ export default function Home() {
                         </div>
                         {checklist.items.length > 0 && (
                           <div className="space-y-1 mb-2">
-                            {checklist.items.map((item) => {
-                              const progress = getChecklistProgress(checklist);
-                              return (
+                            {checklist.items.map((item) => (
                                 <div key={item.id} className="flex items-center gap-2">
                                   <input
                                     type="checkbox"
@@ -1730,15 +1941,14 @@ export default function Home() {
                                     <X className="h-3 w-3" />
                                   </Button>
                                 </div>
-                              );
-                            })}
+                            ))}
                           </div>
                         )}
-                        {progress && (
+                        {getChecklistProgress(checklist) && (
                           <div className="h-1.5 bg-background rounded-full overflow-hidden mb-2">
                             <div
                               className="h-full bg-primary transition-all"
-                              style={{ width: `${(progress.checked / progress.total) * 100}%` }}
+                              style={{ width: `${(getChecklistProgress(checklist)!.checked / getChecklistProgress(checklist)!.total) * 100}%` }}
                             />
                           </div>
                         )}
