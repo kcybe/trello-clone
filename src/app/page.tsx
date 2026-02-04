@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { SearchBar } from "@/components/board/search-bar";
 import { FilterPanel } from "@/components/board/filter-panel";
+import { BoardStatistics } from "@/components/board/board-statistics";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import type { Board, Column, Card as CardType, CardLabel, CardAttachment, Checklist, ChecklistItem, Comment, Activity, ActivityType } from "@/types";
 import type { FilterState } from "@/components/board/filter-panel";
 import { importBoardFromJSON, validateBoardImport, downloadBoardAsJSON, BoardExportData } from "@/lib/export";
@@ -34,14 +36,19 @@ const LABEL_COLORS = [
 ];
 
 // Keyboard shortcuts
-const SHORTCUTS = {
-  n: "New card",
-  f: "Search",
-  "/": "Focus search",
- Escape: "Close dialog",
-  ArrowUp: "Navigate up",
-  ArrowDown: "Navigate down",
-};
+const SHORTCUTS = [
+  { key: "n", description: "New card" },
+  { key: "/", description: "Focus search" },
+  { key: "Escape", description: "Close modal/dialog" },
+  { key: "?", description: "Show shortcuts cheat sheet" },
+  { key: "ArrowLeft", description: "Navigate to previous column" },
+  { key: "ArrowRight", description: "Navigate to next column" },
+  { key: "ArrowUp", description: "Navigate up" },
+  { key: "ArrowDown", description: "Navigate down" },
+  { key: "Enter", description: "Edit selected card" },
+  { key: "ctrl+z", description: "Undo", modifier: "ctrl" },
+  { key: "ctrl+y", description: "Redo", modifier: "ctrl" },
+];
 
 const initialBoard: Board = {
   columns: [
@@ -574,66 +581,72 @@ export default function Home() {
     }
   }, [board, isLoaded]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in input/textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        if (e.key === "/" && !e.target.value) {
-          e.preventDefault();
-          document.getElementById("search-input")?.focus();
-        }
-        return;
-      }
-
-      // Undo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-        return;
-      }
-      
-      // Redo
-      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-
-      if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        // Open first add card dialog
-        setIsAddCardOpen(board?.columns[0]?.id || null);
-      }
-      if (e.key === "f" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        document.getElementById("search-input")?.focus();
-      }
-      if (e.key === "?") {
-        e.preventDefault();
-        setShowShortcuts(true);
-      }
-      if (e.key === "Escape") {
+  // Keyboard shortcuts using useKeyboardShortcuts hook
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      action: () => setIsAddCardOpen(board?.columns[0]?.id || null),
+      description: "New card",
+    },
+    {
+      key: "/",
+      action: () => {
+        // Focus search input - let the search bar handle it
+      },
+      description: "Focus search",
+    },
+    {
+      key: "?",
+      action: () => setShowShortcuts(true),
+      description: "Show shortcuts cheat sheet",
+    },
+    {
+      key: "Escape",
+      action: () => {
         setShowShortcuts(false);
         setMoveCardOpen(null);
-      }
-      
-      // Card navigation with arrows
-      if ((e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        navigateCards(e.key);
-      }
-      
-      // Edit selected card
-      if (e.key === "Enter" && selectedCard) {
-        e.preventDefault();
-        openEditCard(selectedCard.card, selectedCard.columnId);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [board, boardHistory, historyIndex]);
+        setNotificationSettingsOpen(false);
+      },
+      description: "Close modal/dialog",
+    },
+    {
+      key: "ArrowLeft",
+      action: () => navigateColumns("left"),
+      description: "Navigate to previous column",
+    },
+    {
+      key: "ArrowRight",
+      action: () => navigateColumns("right"),
+      description: "Navigate to next column",
+    },
+    {
+      key: "ArrowUp",
+      action: () => navigateCards("ArrowUp"),
+      description: "Navigate up",
+    },
+    {
+      key: "ArrowDown",
+      action: () => navigateCards("ArrowDown"),
+      description: "Navigate down",
+    },
+    {
+      key: "Enter",
+      action: () => selectedCard && openEditCard(selectedCard.card, selectedCard.columnId),
+      description: "Edit selected card",
+    },
+    {
+      key: "z",
+      modifier: "ctrl",
+      action: undo,
+      description: "Undo",
+    },
+    {
+      key: "y",
+      modifier: "ctrl",
+      action: redo,
+      description: "Redo",
+    },
+  ], { enabled: true });
 
   // Filter and sort cards
   const filteredBoard = useMemo(() => {
@@ -1422,6 +1435,40 @@ export default function Home() {
     setSelectedCard(allCards[newIndex]);
   };
 
+  // Navigate between columns
+  const navigateColumns = (direction: "left" | "right") => {
+    if (!board || board.columns.length === 0) return;
+    
+    const currentColumnIndex = selectedCard
+      ? board.columns.findIndex(col => col.id === selectedCard.columnId)
+      : 0;
+    
+    let newColumnIndex = currentColumnIndex;
+    
+    if (direction === "right") {
+      newColumnIndex = currentColumnIndex < board.columns.length - 1 ? currentColumnIndex + 1 : 0;
+    } else {
+      newColumnIndex = currentColumnIndex > 0 ? currentColumnIndex - 1 : board.columns.length - 1;
+    }
+    
+    const newColumn = board.columns[newColumnIndex];
+    
+    // Select first card in the new column, or null if empty
+    setSelectedCard({
+      columnId: newColumn.id,
+      card: newColumn.cards[0] || { 
+        id: "", 
+        title: "", 
+        createdAt: new Date(), 
+        labels: [], 
+        comments: [],
+        checklists: [],
+        attachments: [],
+      },
+      index: 0,
+    });
+  };
+
   const openEditCard = (card: CardType, columnId: string) => {
     setEditingCard({
       id: card.id,
@@ -1702,20 +1749,39 @@ export default function Home() {
       {/* Keyboard shortcuts modal */}
       {showShortcuts && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowShortcuts(false)}>
-          <div className="bg-background rounded-lg p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-lg p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Keyboard Shortcuts</h2>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Keyboard className="h-5 w-5" />
+                Keyboard Shortcuts
+              </h2>
               <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="space-y-2">
-              {Object.entries(SHORTCUTS).map(([key, desc]) => (
-                <div key={key} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{desc}</span>
-                  <kbd className="bg-muted px-2 py-0.5 rounded text-xs font-mono">{key}</kbd>
+            <div className="space-y-1">
+              {SHORTCUTS.map((shortcut) => (
+                <div key={`${shortcut.modifier || ""}-${shortcut.key}`} className="flex justify-between items-center py-1.5 px-2 hover:bg-muted/50 rounded">
+                  <span className="text-sm text-muted-foreground">{shortcut.description}</span>
+                  <div className="flex items-center gap-1">
+                    {shortcut.modifier && (
+                      <kbd className="bg-muted px-2 py-0.5 rounded text-xs font-mono border">
+                        {shortcut.modifier === "ctrl" ? "Ctrl" : shortcut.modifier.charAt(0).toUpperCase() + shortcut.modifier.slice(1)}
+                      </kbd>
+                    )}
+                    <kbd className="bg-muted px-2 py-0.5 rounded text-xs font-mono border min-w-[24px] text-center">
+                      {shortcut.key === "ArrowLeft" ? "←" : 
+                       shortcut.key === "ArrowRight" ? "→" : 
+                       shortcut.key === "ArrowUp" ? "↑" : 
+                       shortcut.key === "ArrowDown" ? "↓" : 
+                       shortcut.key}
+                    </kbd>
+                  </div>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 pt-4 border-t text-center text-xs text-muted-foreground">
+              Press <kbd className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">?</kbd> again to close
             </div>
           </div>
         </div>
@@ -2655,6 +2721,9 @@ export default function Home() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Board Statistics Footer */}
+      <BoardStatistics board={board} />
     </div>
   );
 }
