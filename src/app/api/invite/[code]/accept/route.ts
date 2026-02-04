@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// POST /api/invite/code - Accept invite and add user as member
-export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+// POST /api/invite/[code]/accept - Accept invite and add user as member
+export async function POST(req: NextRequest, props: { params: Promise<{ code: string }> }) {
+  const { params } = props;
   try {
     const { code } = await params;
     const session = await auth.api.getSession({ headers: req.headers });

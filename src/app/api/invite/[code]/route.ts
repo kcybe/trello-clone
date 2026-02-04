@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/invite/code - Get board by invite code
-export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
+// GET /api/invite/[code] - Get board by invite code
+export async function GET(req: Request, props: { params: Promise<{ code: string }> }) {
+  const { params } = props;
   try {
     const { code } = await params;
 

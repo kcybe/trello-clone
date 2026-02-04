@@ -39,6 +39,7 @@ export default function Home() {
   const { activities, addActivity } = useActivities();
   const {
     boardList,
+    boardHistory,
     historyIndex,
     isLoaded,
     currentBoard,
@@ -305,7 +306,7 @@ export default function Home() {
     onSetSearchQuery: setSearchQuery,
     onToggleCompact: () => setIsCompact(!isCompact),
     onToggleNotifications: () => setNotificationsEnabled(!notificationsEnabled),
-    onRequestNotificationPermission,
+    onRequestNotificationPermission: requestNotificationPermission,
     onExportBoard: exportBoard,
     onToggleActivity: () => setShowActivity(!showActivity),
     onShowShortcuts: () => setShowShortcuts(true),
@@ -314,7 +315,7 @@ export default function Home() {
     onUndo: undo,
     onRedo: redo,
     historyIndex,
-    boardHistoryLength: boardList.history?.length || 0,
+    boardHistoryLength: boardHistory?.length || 0,
   };
 
   const cardModalProps = {
@@ -377,7 +378,7 @@ export default function Home() {
               isCompact={isCompact}
               isAddCardOpen={isAddCardOpen}
               moveCardOpen={moveCardOpen}
-              selectedCardId={selectedCard?.card.id}
+              selectedCardId={selectedCard?.card.id ?? null}
               onAddCard={handleAddCard}
               onDeleteColumn={deleteColumn}
               onArchiveCard={handleArchiveCard}
@@ -387,7 +388,7 @@ export default function Home() {
               onCloseAddCard={() => setIsAddCardOpen(null)}
               onSetNewCardTitle={setNewCardTitle}
               onSetMoveCardOpen={setMoveCardOpen}
-              onSelectCard={setSelectedCard}
+              onSelectCard={(card, columnId, index) => setSelectedCard({ card, columnId, index })}
               onEditCard={openEditCard}
               onUnarchiveCard={handleUnarchiveCard}
               onPermanentlyDeleteCard={permanentlyDeleteCard}

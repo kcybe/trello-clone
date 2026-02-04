@@ -1,6 +1,3 @@
-// Socket.IO server utilities
-export * from './server';
-
 // Socket.IO client utilities
 export * from './client';
 
@@ -12,3 +9,15 @@ export * from './emitter';
 
 // Real-time board hook
 export * from './real-time';
+
+// Re-export types for convenience
+export type {
+  BoardUpdateData,
+  ColumnCreatedData,
+  ColumnUpdatedData,
+  ColumnDeletedData,
+  CardCreatedData,
+  CardUpdatedData,
+  CardDeletedData,
+  CardMovedData,
+} from './client';

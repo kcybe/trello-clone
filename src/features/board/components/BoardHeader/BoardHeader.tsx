@@ -30,11 +30,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { BoardHeaderProps } from '@/types';
 
 import { useState } from 'react';
 
 import { BOARD_TEMPLATES } from '../../hooks/useBoard';
-import { BoardHeaderProps } from '../types';
 
 export function BoardHeader({
   currentBoard,

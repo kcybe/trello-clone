@@ -1,2 +1,2 @@
 export * from './TemplatesModal';
-export * from './TemplateCard';
+export * from './TemplatesModal/TemplateCard';
