@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Calendar, Tag, Search, Moon, Sun, Keyboard, Paperclip, CheckSquare, User, Link2, Trash, MessageCircle, Grid, Layout, RotateCcw, Archive, ArrowUpDown, Copy, Filter, Palette, Minimize2, ArrowRight, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -704,6 +704,40 @@ export default function Home() {
     });
   };
 
+  const exportBoard = () => {
+    if (!board) return;
+    
+    const exportData = {
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+      board: {
+        columns: board.columns.map(col => ({
+          ...col,
+          cards: col.cards.map(card => ({
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
+            createdAt: new Date(card.createdAt).toISOString(),
+            archived: card.archived || false,
+          })),
+          archivedCards: col.archivedCards?.map(card => ({
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate).toISOString() : null,
+            createdAt: new Date(card.createdAt).toISOString(),
+            archived: true,
+          })) || [],
+        })),
+      },
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `trello-clone-board-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const updateCard = () => {
     if (!editingCard || !board) return;
 
@@ -1091,6 +1125,11 @@ export default function Home() {
           {/* Dark mode toggle */}
           <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)}>
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          
+          {/* Export button */}
+          <Button variant="ghost" size="icon" onClick={exportBoard} title="Export board (JSON)">
+            <Download className="h-5 w-5" />
           </Button>
         </div>
       </header>
