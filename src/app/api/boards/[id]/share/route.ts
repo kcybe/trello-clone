@@ -1,13 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 function generateShareToken(): string {
   return `share_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
+async function checkBoardAccess(boardId: string, userId: string): Promise<boolean> {
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    include: { members: true },
+  });
+
+  if (!board) return false;
+
+  return board.ownerId === userId || board.members.some(m => m.userId === userId);
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = await params;
+
+  // Check authentication
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Verify board access
+  const hasAccess = await checkBoardAccess(boardId, session.user.id);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   const shareSettings = await prisma.boardShare.findUnique({
     where: { boardId },
@@ -30,6 +54,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = await params;
+
+  // Check authentication
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Verify board access
+  const hasAccess = await checkBoardAccess(boardId, session.user.id);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   const shareToken = generateShareToken();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
@@ -58,6 +94,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: boardId } = await params;
+
+  // Check authentication
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Verify board access
+  const hasAccess = await checkBoardAccess(boardId, session.user.id);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

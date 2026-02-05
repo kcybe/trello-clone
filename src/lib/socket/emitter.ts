@@ -42,6 +42,14 @@ export function useSocketEmitter(boardId: string | null) {
     [socket]
   );
 
+  const emitCardArchived = useCallback(
+    (columnId: string, cardId: string) => {
+      if (!boardIdRef.current || !socket) return;
+      socket.emit('card:archived', { boardId: boardIdRef.current, columnId, cardId });
+    },
+    [socket]
+  );
+
   const emitCardMoved = useCallback(
     (cardId: string, fromColumnId: string, toColumnId: string, newIndex: number) => {
       if (!boardIdRef.current || !socket) return;
@@ -93,6 +101,7 @@ export function useSocketEmitter(boardId: string | null) {
     emitCardCreated,
     emitCardUpdated,
     emitCardDeleted,
+    emitCardArchived,
     emitCardMoved,
     emitColumnCreated,
     emitColumnUpdated,
