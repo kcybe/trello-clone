@@ -55,14 +55,14 @@ export function useCardModal(options: UseCardModalOptions): CardModalProps {
         id: options.editingCard.card.id,
         title: options.editingCard.card.title,
         description: options.editingCard.card.description ?? '',
-        labels: options.editingCard.card.labels,
+        labels: options.editingCard.card.labels ?? [],
         assignee: options.editingCard.card.assignee,
-        attachments: options.editingCard.card.attachments,
-        checklists: options.editingCard.card.checklists,
-        dueDate: options.editingCard.card.dueDate,
+        attachments: options.editingCard.card.attachments ?? [],
+        checklists: options.editingCard.card.checklists ?? [],
+        dueDate: options.editingCard.card.dueDate ?? '',
         columnId: options.editingCard.columnId,
-        comments: options.editingCard.card.comments,
-        color: options.editingCard.card.color,
+        comments: options.editingCard.card.comments ?? [],
+        color: options.editingCard.card.color ?? '',
       }
     : null;
 
