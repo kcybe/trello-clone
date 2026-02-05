@@ -2,6 +2,7 @@
 export * from './types';
 
 // Components
+export { ActivityLog } from './components/ActivityLog';
 export { BoardHeader } from './components/BoardHeader';
 export { BoardColumn } from './components/BoardColumn';
 export { CardItem } from './components/CardItem';

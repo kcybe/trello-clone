@@ -54,7 +54,7 @@ export function useCardModal(options: UseCardModalOptions): CardModalProps {
     ? {
         id: options.editingCard.card.id,
         title: options.editingCard.card.title,
-        description: options.editingCard.card.description,
+        description: options.editingCard.card.description ?? '',
         labels: options.editingCard.card.labels,
         assignee: options.editingCard.card.assignee,
         attachments: options.editingCard.card.attachments,

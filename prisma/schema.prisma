@@ -121,8 +121,22 @@ model Column {
 
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   cards     Card[]
+  labels    Label[]
 
   @@index([boardId])
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  name      String
+  color     String
+  columnId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@index([columnId])
 }
 
 model Card {
