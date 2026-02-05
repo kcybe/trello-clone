@@ -1,4 +1,3 @@
-import { type inferAsyncReturnType } from '@trpc/server';
 import { type Session, type User } from 'better-auth';
 
 export type { Session, User };

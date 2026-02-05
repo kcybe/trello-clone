@@ -41,50 +41,59 @@ export function useAuth(): UseAuthReturn {
     fetchSession();
   }, [fetchSession]);
 
-  const signIn = useCallback(async (input: SignInInput) => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await authClient.signIn.email({
-        email: input.email,
-        password: input.password,
-      });
-      if (error) {
-        return { success: false, error: new Error(error.message) };
+  const signIn = useCallback(
+    async (input: SignInInput) => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await authClient.signIn.email({
+          email: input.email,
+          password: input.password,
+        });
+        if (error) {
+          return { success: false, error: new Error(error.message) };
+        }
+        if (data) {
+          // signIn returns user directly, not session
+          setUser(data.user);
+          // Fetch session separately after signIn
+          await fetchSession();
+        }
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error as Error };
+      } finally {
+        setIsLoading(false);
       }
-      if (data) {
-        setUser(data.user);
-        setSession(data.session);
-      }
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error as Error };
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [fetchSession]
+  );
 
-  const signUp = useCallback(async (input: SignUpInput) => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await authClient.signUp.email({
-        email: input.email,
-        password: input.password,
-        name: input.name,
-      });
-      if (error) {
-        return { success: false, error: new Error(error.message) };
+  const signUp = useCallback(
+    async (input: SignUpInput) => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await authClient.signUp.email({
+          email: input.email,
+          password: input.password,
+          name: input.name,
+        });
+        if (error) {
+          return { success: false, error: new Error(error.message) };
+        }
+        if (data) {
+          setUser(data.user);
+          // signUp returns user, fetch session separately
+          await fetchSession();
+        }
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error as Error };
+      } finally {
+        setIsLoading(false);
       }
-      if (data) {
-        setUser(data.user);
-        setSession(data.session);
-      }
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error as Error };
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [fetchSession]
+  );
 
   const signOut = useCallback(async () => {
     try {
