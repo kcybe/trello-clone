@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+const createBoardSchema = z.object({
+  name: z.string().min(1).max(100, 'Board name must be 1-100 characters'),
+  description: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+});
 
 // GET /api/boards - List all boards for user
 export async function GET(req: Request) {
@@ -49,11 +56,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, description, color } = await req.json();
+    const body = createBoardSchema.parse(await req.json());
 
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'Board name is required' }, { status: 400 });
-    }
+    const { name, description, color } = body;
 
     const board = await prisma.board.create({
       data: {

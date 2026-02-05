@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+const createCardSchema = z.object({
+  title: z.string().min(1, 'Card title is required'),
+  description: z.string().optional().nullable(),
+  columnId: z.string().min(1, 'Column ID is required'),
+  position: z.number().optional(),
+  dueDate: z.string().optional().nullable(),
+});
 
 // GET /api/cards - List cards for user (optional filter by board)
 export async function GET(req: Request) {
@@ -52,15 +61,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, description, columnId, position, dueDate } = await req.json();
+    const body = createCardSchema.parse(await req.json());
 
-    if (!title || typeof title !== 'string') {
-      return NextResponse.json({ error: 'Card title is required' }, { status: 400 });
-    }
-
-    if (!columnId) {
-      return NextResponse.json({ error: 'Column ID is required' }, { status: 400 });
-    }
+    const { title, description, columnId, position, dueDate } = body;
 
     // Check if column exists and user has access
     const column = await prisma.column.findUnique({
