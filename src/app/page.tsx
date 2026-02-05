@@ -8,6 +8,7 @@ import { BoardColumn } from '@/features/board/components/BoardColumn';
 import { ShortcutsModal, AddColumnDialog } from '@/features/board/components/BoardDialogs';
 import { BoardFooter } from '@/features/board/components/BoardFooter';
 import { BoardHeader } from '@/features/board/components/BoardHeader';
+import { CalendarView } from '@/features/board/components/CalendarView';
 import { CardModal } from '@/features/board/components/CardModal';
 import { Board, Card as CardType, ViewMode, SortBy, SortOrder, User } from '@/types';
 
@@ -369,41 +370,45 @@ export default function Home() {
       <BoardHeader {...headerProps} />
       <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto p-4 h-[calc(100vh-80px)]">
-          {currentBoard.columns.map(column => (
-            <BoardColumn
-              key={column.id}
-              column={column}
-              cards={column.cards}
-              isCompact={isCompact}
-              isAddCardOpen={isAddCardOpen}
-              moveCardOpen={moveCardOpen}
-              selectedCardId={selectedCard?.card.id ?? null}
-              onAddCard={handleAddCard}
-              onDeleteColumn={deleteColumn}
-              onArchiveCard={handleArchiveCard}
-              onDuplicateCard={handleDuplicateCard}
-              onMoveCard={handleMoveCard}
-              onOpenAddCard={setIsAddCardOpen}
-              onCloseAddCard={() => setIsAddCardOpen(null)}
-              onSetNewCardTitle={setNewCardTitle}
-              onSetMoveCardOpen={setMoveCardOpen}
-              onSelectCard={(card, columnId, index) => setSelectedCard({ card, columnId, index })}
-              onEditCard={openEditCard}
-              onUnarchiveCard={handleUnarchiveCard}
-              onPermanentlyDeleteCard={permanentlyDeleteCard}
-            />
-          ))}
+      {view === 'calendar' ? (
+        <CalendarView board={currentBoard} onEditCard={openEditCard} />
+      ) : (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="flex gap-4 overflow-x-auto p-4 h-[calc(100vh-80px)]">
+            {currentBoard.columns.map(column => (
+              <BoardColumn
+                key={column.id}
+                column={column}
+                cards={column.cards}
+                isCompact={isCompact}
+                isAddCardOpen={isAddCardOpen}
+                moveCardOpen={moveCardOpen}
+                selectedCardId={selectedCard?.card.id ?? null}
+                onAddCard={handleAddCard}
+                onDeleteColumn={deleteColumn}
+                onArchiveCard={handleArchiveCard}
+                onDuplicateCard={handleDuplicateCard}
+                onMoveCard={handleMoveCard}
+                onOpenAddCard={setIsAddCardOpen}
+                onCloseAddCard={() => setIsAddCardOpen(null)}
+                onSetNewCardTitle={setNewCardTitle}
+                onSetMoveCardOpen={setMoveCardOpen}
+                onSelectCard={(card, columnId, index) => setSelectedCard({ card, columnId, index })}
+                onEditCard={openEditCard}
+                onUnarchiveCard={handleUnarchiveCard}
+                onPermanentlyDeleteCard={permanentlyDeleteCard}
+              />
+            ))}
 
-          <AddColumnDialog
-            newColumnTitle={newColumnTitle}
-            onSetNewColumnTitle={setNewColumnTitle}
-            onAddColumn={handleAddColumn}
-            onClear={() => setNewColumnTitle('')}
-          />
-        </div>
-      </DragDropContext>
+            <AddColumnDialog
+              newColumnTitle={newColumnTitle}
+              onSetNewColumnTitle={setNewColumnTitle}
+              onAddColumn={handleAddColumn}
+              onClear={() => setNewColumnTitle('')}
+            />
+          </div>
+        </DragDropContext>
+      )}
 
       <BoardFooter currentBoard={currentBoard} />
       <CardModal {...cardModalProps} />
