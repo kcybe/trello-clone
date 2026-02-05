@@ -197,7 +197,7 @@ export function CardItem({
         {card.dueDate && (
           <div
             className={`flex items-center gap-1 mt-2 text-xs ${
-              isOverdue(card.dueDate) ? 'text-red-500' : 'text-muted-foreground'
+              isOverdue(new Date(card.dueDate)) ? 'text-red-500' : 'text-muted-foreground'
             }`}
           >
             <Calendar className="h-3 w-3" />

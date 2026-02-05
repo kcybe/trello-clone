@@ -360,6 +360,7 @@ export default function Home() {
     onSetNewCommentText: setNewCommentText,
     onSetColor: setColor,
     onSetDueDate: setDueDate,
+    getChecklistProgress,
     onSave: handleUpdateCard,
   };
 

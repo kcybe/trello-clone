@@ -65,6 +65,7 @@ export function BoardHeader({
   onExportBoard,
   onToggleActivity,
   onShowShortcuts,
+  onOpenTemplates,
   onOpenShare,
   onSignIn,
   onSignOut,

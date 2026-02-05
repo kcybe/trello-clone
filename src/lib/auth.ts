@@ -21,4 +21,6 @@ export const auth = betterAuth({
   trustedOrigins: [process.env.BETTER_AUTH_URL || 'http://localhost:3000'],
 });
 
-export const { GET, POST } = auth;
+// API handlers for Next.js App Router
+export const GET = auth.handler;
+export const POST = auth.handler;

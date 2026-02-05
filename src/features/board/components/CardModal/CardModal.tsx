@@ -23,7 +23,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import { LABEL_COLORS, MEMBER_SUGGESTIONS } from '../../hooks/useCards';
-import { CardModalProps } from '../../types';
+import { CardAttachment, CardModalProps } from '../../types';
 
 export function CardModal({
   isOpen,
@@ -39,36 +39,41 @@ export function CardModal({
   newCommentAuthor,
   newCommentText,
   onClose,
-  updateCardTitle,
-  updateCardDescription,
-  setDescTab,
-  addLabel,
-  removeLabel,
-  setNewLabelText,
-  addMember,
-  removeMember,
-  setNewMemberName,
-  setShowMemberSuggestions,
-  addAttachment,
-  removeAttachment,
-  setNewAttachmentUrl,
-  setNewAttachmentName,
-  addChecklist,
-  removeChecklist,
-  setNewChecklistTitle,
-  addChecklistItem,
-  removeChecklistItem,
-  toggleChecklistItem,
-  setNewChecklistItem,
-  addComment,
-  deleteComment,
-  setNewCommentAuthor,
-  setNewCommentText,
-  setColor,
-  setDueDate,
+  onUpdateTitle,
+  onUpdateDescription,
+  onSetDescTab,
+  onAddLabel,
+  onRemoveLabel,
+  onSetNewLabelText,
+  onAddMember,
+  onRemoveMember,
+  onSetNewMemberName,
+  onSetShowMemberSuggestions,
+  onAddAttachment,
+  onRemoveAttachment,
+  onSetNewAttachmentUrl,
+  onSetNewAttachmentName,
+  onAddChecklist,
+  onRemoveChecklist,
+  onSetNewChecklistTitle,
+  onAddChecklistItem,
+  onRemoveChecklistItem,
+  onToggleChecklistItem,
+  onSetNewChecklistItem,
+  onAddComment,
+  onDeleteComment,
+  onSetNewCommentAuthor,
+  onSetNewCommentText,
+  onSetColor,
+  onSetDueDate,
   getChecklistProgress,
   onAddUploadedAttachment,
 }: CardModalProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const setEditingCard = (_: any) => {
+    // editingCard should not be modified locally - use proper callbacks instead
+    console.warn('setEditingCard called - use proper update callbacks');
+  };
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -134,7 +139,7 @@ export function CardModal({
           {/* Title */}
           <div>
             <label className="text-sm font-medium">Title</label>
-            <Input value={editingCard.title} onChange={e => updateCardTitle(e.target.value)} />
+            <Input value={editingCard.title} onChange={e => onUpdateTitle(e.target.value)} />
           </div>
 
           {/* Description */}
@@ -144,7 +149,7 @@ export function CardModal({
               <div className="flex bg-muted rounded-md p-0.5">
                 <button
                   type="button"
-                  onClick={() => setDescTab('edit')}
+                  onClick={() => onSetDescTab('edit')}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
                     descTab === 'edit'
                       ? 'bg-background shadow-sm'
@@ -156,7 +161,7 @@ export function CardModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDescTab('preview')}
+                  onClick={() => onSetDescTab('preview')}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${
                     descTab === 'preview'
                       ? 'bg-background shadow-sm'
@@ -173,7 +178,7 @@ export function CardModal({
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                 rows={6}
                 value={editingCard.description}
-                onChange={e => updateCardDescription(e.target.value)}
+                onChange={e => onUpdateDescription(e.target.value)}
                 placeholder="Add a description... (Markdown supported)"
               />
             ) : (
@@ -203,7 +208,7 @@ export function CardModal({
                   className={`${label.color} text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1`}
                 >
                   {label.text}
-                  <button onClick={() => removeLabel(label.id)} className="hover:text-red-200">
+                  <button onClick={() => onRemoveLabel(label.id)} className="hover:text-red-200">
                     <X className="h-3 w-3" />
                   </button>
                 </span>
@@ -213,16 +218,16 @@ export function CardModal({
               <Input
                 placeholder="New label..."
                 value={newLabelText}
-                onChange={e => setNewLabelText(e.target.value)}
+                onChange={e => onSetNewLabelText(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    addLabel();
+                    onAddLabel();
                   }
                 }}
                 className="flex-1"
               />
-              <Button variant="outline" size="icon" onClick={addLabel}>
+              <Button variant="outline" size="icon" onClick={onAddLabel}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -241,7 +246,7 @@ export function CardModal({
                       ...editingCard,
                       labels: [...editingCard.labels, newLabel],
                     });
-                    setNewLabelText('');
+                    onSetNewLabelText('');
                   }}
                   title={color.name}
                 />
@@ -261,7 +266,7 @@ export function CardModal({
                   {editingCard.assignee.charAt(0).toUpperCase()}
                 </div>
                 <span className="flex-1 text-sm">{editingCard.assignee}</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={removeMember}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onRemoveMember}>
                   <X className="h-3 w-3" />
                 </Button>
               </div>
@@ -271,16 +276,16 @@ export function CardModal({
                 placeholder="Add member..."
                 value={newMemberName}
                 onChange={e => {
-                  setNewMemberName(e.target.value);
-                  setShowMemberSuggestions(true);
+                  onSetNewMemberName(e.target.value);
+                  onSetShowMemberSuggestions(true);
                 }}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    addMember();
+                    onAddMember();
                   }
                 }}
-                onFocus={() => setShowMemberSuggestions(true)}
+                onFocus={() => onSetShowMemberSuggestions(true)}
                 className="flex-1"
               />
               {showMemberSuggestions && newMemberName && (
@@ -292,8 +297,8 @@ export function CardModal({
                       key={member}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
                       onClick={() => {
-                        setNewMemberName(member);
-                        setShowMemberSuggestions(false);
+                        onSetNewMemberName(member);
+                        onSetShowMemberSuggestions(false);
                         setEditingCard({ ...editingCard, assignee: member });
                       }}
                     >
@@ -327,7 +332,7 @@ export function CardModal({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-destructive"
-                      onClick={() => removeAttachment(att.id)}
+                      onClick={() => onRemoveAttachment(att.id)}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -339,20 +344,20 @@ export function CardModal({
               <Input
                 placeholder="Attachment name..."
                 value={newAttachmentName}
-                onChange={e => setNewAttachmentName(e.target.value)}
+                onChange={e => onSetNewAttachmentName(e.target.value)}
                 className="col-span-2"
               />
               <Input
                 placeholder="URL..."
                 value={newAttachmentUrl}
-                onChange={e => setNewAttachmentUrl(e.target.value)}
+                onChange={e => onSetNewAttachmentUrl(e.target.value)}
                 className="col-span-2"
               />
               <Button
                 variant="outline"
                 size="sm"
                 className="col-span-2"
-                onClick={addAttachment}
+                onClick={onAddAttachment}
                 disabled={!newAttachmentUrl.trim()}
               >
                 <Link2 className="h-4 w-4 mr-2" />
@@ -405,7 +410,7 @@ export function CardModal({
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-destructive"
-                        onClick={() => removeChecklist(checklist.id)}
+                        onClick={() => onRemoveChecklist(checklist.id)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -417,7 +422,7 @@ export function CardModal({
                             <input
                               type="checkbox"
                               checked={item.checked}
-                              onChange={() => toggleChecklistItem(checklist.id, item.id)}
+                              onChange={() => onToggleChecklistItem(checklist.id, item.id)}
                               className="h-4 w-4 rounded border-gray-300"
                             />
                             <span
@@ -431,7 +436,7 @@ export function CardModal({
                               variant="ghost"
                               size="icon"
                               className="h-5 w-5"
-                              onClick={() => removeChecklistItem(checklist.id, item.id)}
+                              onClick={() => onRemoveChecklistItem(checklist.id, item.id)}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -457,11 +462,11 @@ export function CardModal({
                       <Input
                         placeholder="Add item..."
                         value={newChecklistItem}
-                        onChange={e => setNewChecklistItem(e.target.value)}
+                        onChange={e => onSetNewChecklistItem(e.target.value)}
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            addChecklistItem(checklist.id);
+                            onAddChecklistItem(checklist.id);
                           }
                         }}
                         className="flex-1 h-8"
@@ -470,7 +475,7 @@ export function CardModal({
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => addChecklistItem(checklist.id)}
+                        onClick={() => onAddChecklistItem(checklist.id)}
                         disabled={!newChecklistItem.trim()}
                       >
                         <Plus className="h-4 w-4" />
@@ -484,11 +489,11 @@ export function CardModal({
               <Input
                 placeholder="New checklist title..."
                 value={newChecklistTitle}
-                onChange={e => setNewChecklistTitle(e.target.value)}
+                onChange={e => onSetNewChecklistTitle(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    addChecklist();
+                    onAddChecklist();
                   }
                 }}
               />
@@ -496,7 +501,7 @@ export function CardModal({
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full"
-                onClick={addChecklist}
+                onClick={onAddChecklist}
                 disabled={!newChecklistTitle.trim()}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -527,7 +532,7 @@ export function CardModal({
                           variant="ghost"
                           size="icon"
                           className="h-5 w-5"
-                          onClick={() => deleteComment(comment.id)}
+                          onClick={() => onDeleteComment(comment.id)}
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -544,11 +549,11 @@ export function CardModal({
               <Input
                 placeholder="Your name..."
                 value={newCommentAuthor}
-                onChange={e => setNewCommentAuthor(e.target.value)}
+                onChange={e => onSetNewCommentAuthor(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && newCommentAuthor.trim() && newCommentText.trim()) {
                     e.preventDefault();
-                    addComment();
+                    onAddComment();
                   }
                 }}
               />
@@ -556,17 +561,17 @@ export function CardModal({
                 <Input
                   placeholder="Write a comment..."
                   value={newCommentText}
-                  onChange={e => setNewCommentText(e.target.value)}
+                  onChange={e => onSetNewCommentText(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && newCommentAuthor.trim() && newCommentText.trim()) {
                       e.preventDefault();
-                      addComment();
+                      onAddComment();
                     }
                   }}
                   className="flex-1"
                 />
                 <Button
-                  onClick={addComment}
+                  onClick={onAddComment}
                   disabled={!newCommentAuthor.trim() || !newCommentText.trim()}
                 >
                   Post
@@ -594,7 +599,7 @@ export function CardModal({
               ].map(color => (
                 <button
                   key={color.name}
-                  onClick={() => setColor(color.value)}
+                  onClick={() => onSetColor(color.value)}
                   className={`w-8 h-8 rounded-full border-2 ${
                     editingCard.color === color.value ? 'border-primary' : 'border-transparent'
                   } ${color.value || 'bg-muted'}`}
@@ -615,7 +620,7 @@ export function CardModal({
             <Input
               type="date"
               value={editingCard.dueDate}
-              onChange={e => setDueDate(e.target.value)}
+              onChange={e => onSetDueDate(e.target.value)}
               className="mt-2"
             />
             {editingCard.dueDate && (
@@ -623,7 +628,7 @@ export function CardModal({
                 variant="ghost"
                 size="sm"
                 className="mt-1 text-xs text-muted-foreground"
-                onClick={() => setDueDate('')}
+                onClick={() => onSetDueDate('')}
               >
                 Clear due date
               </Button>

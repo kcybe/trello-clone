@@ -79,7 +79,7 @@ type SocketType = {
 // Singleton socket instance
 let socket: SocketType | null = null;
 
-export function getSocket(): SocketType {
+export function getSocket(): SocketType | null {
   if (!socket) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const io = require('socket.io-client');
@@ -92,23 +92,23 @@ export function getSocket(): SocketType {
       reconnectionDelayMax: 5000,
     });
 
-    socket.on('connect', () => {
+    socket?.on('connect', () => {
       console.log('Socket connected:', socket?.id);
     });
 
-    socket.on('disconnect', (reason: string) => {
+    socket?.on('disconnect', (reason: string) => {
       console.log('Socket disconnected:', reason);
     });
 
-    socket.on('connect_error', (error: Error) => {
+    socket?.on('connect_error', (error: Error) => {
       console.error('Socket connection error:', error);
     });
 
-    socket.on('reconnect', (attemptNumber: number) => {
+    socket?.on('reconnect', (attemptNumber: number) => {
       console.log('Socket reconnected after', attemptNumber, 'attempts');
     });
 
-    socket.on('reconnect_failed', () => {
+    socket?.on('reconnect_failed', () => {
       console.error('Socket reconnection failed');
     });
   }
@@ -123,6 +123,7 @@ export function useSocket() {
 
   useEffect(() => {
     const sock = getSocket();
+    if (!sock) return;
     socketRef.current = sock;
 
     const onConnect = () => setIsConnected(true);
@@ -141,16 +142,18 @@ export function useSocket() {
 
   const joinBoard = useCallback((boardId: string) => {
     const sock = socketRef.current || getSocket();
+    if (!sock) return;
     sock.emit('board:join', boardId);
   }, []);
 
   const leaveBoard = useCallback((boardId: string) => {
     const sock = socketRef.current || getSocket();
+    if (!sock) return;
     sock.emit('board:leave', boardId);
   }, []);
 
   return {
-    socket: socketRef.current || getSocket(),
+    socket: socketRef.current || getSocket() || null,
     isConnected,
     joinBoard,
     leaveBoard,
@@ -175,6 +178,7 @@ export function useBoardSocketEvents(
 
   useEffect(() => {
     if (!boardId) return;
+    if (!socket) return;
 
     // Join the board room
     joinBoard(boardId);

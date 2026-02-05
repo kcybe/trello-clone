@@ -343,6 +343,7 @@ export interface CardModalProps {
   onSetDueDate: (date: string) => void;
   onAddUploadedAttachment: (attachment: CardAttachment) => void;
   onSave: () => void;
+  getChecklistProgress: (checklist: Checklist) => { checked: number; total: number } | null;
 }
 
 export interface BoardFooterProps {
