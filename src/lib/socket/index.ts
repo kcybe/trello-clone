@@ -10,6 +10,10 @@ export * from './emitter';
 // Real-time board hook
 export * from './real-time';
 
+// Collaboration features
+export * from './collaboration';
+export * from './useCollaborativeBoard';
+
 // Re-export types for convenience
 export type {
   BoardUpdateData,
