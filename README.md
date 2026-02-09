@@ -19,6 +19,7 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - ⌨️ **Keyboard Shortcuts** - Work faster with keyboard shortcuts
 - 💬 **Comments** - Add, edit, and delete comments on cards
 - 📊 **Activity Feed** - Track all changes to cards and boards
+- 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
 
 ## Tech Stack
 
@@ -84,7 +85,33 @@ trello-clone/
 
 ## API Routes
 
-### Comments API
+### Templates API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/templates` | List all templates (built-in and user-created) |
+| POST | `/api/templates` | Create a new template |
+| GET | `/api/templates/[id]` | Get a specific template |
+| PUT | `/api/templates/[id]` | Update a template |
+| DELETE | `/api/templates/[id]` | Delete a template |
+| POST | `/api/templates/copy` | Create a board from a template |
+| POST | `/api/templates/save` | Save a board as a template |
+
+### Template Categories
+
+Templates are organized into the following categories:
+
+- **kanban** - Classic Kanban boards for workflow management
+- **scrum** - Scrum methodology with sprint backlogs
+- **bug-tracking** - Bug tracking workflows
+- **marketing** - Marketing campaign planning
+- **weekly-review** - Personal productivity and weekly planning
+
+### Using Templates
+
+1. **Create from Template:** When creating a new board, select a template to use as a starting point
+2. **Save as Template:** Save any existing board as a template for future use
+3. **Manage Templates:** View and manage your custom templates in the templates modal
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -160,6 +187,12 @@ Each activity shows:
 - Type of action with icon
 - Timestamp (relative, e.g., "2h ago")
 - Additional details (e.g., column moves)
+
+#### Board Templates 📑
+1. **Create from Template:** When creating a new board, select a template from the template gallery
+2. **Save as Template:** Save any existing board as a custom template for future use
+3. **Template Categories:** Choose from Kanban, Scrum, Bug Tracking, Marketing, or Weekly Review templates
+4. **My Templates:** Access your custom-created templates in the "My Templates" category
 
 #### Dark Mode
 1. Click the moon/sun icon in the header
