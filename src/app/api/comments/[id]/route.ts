@@ -115,6 +115,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         user: {
           select: { id: true, name: true, email: true, image: true },
         },
+        card: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+
+    // Create activity for comment update
+    await prisma.activity.create({
+      data: {
+        action: 'updated',
+        entityType: 'comment',
+        entityId: id,
+        details: JSON.stringify({ preview: content.substring(0, 100) }),
+        userId: session.user.id,
+        boardId: comment.card.column.boardId,
+        cardId: comment.card.id,
       },
     });
 
@@ -166,8 +182,22 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 });
     }
 
+    const deletedCommentId = comment.id;
     await prisma.comment.delete({
       where: { id },
+    });
+
+    // Create activity for comment deletion
+    await prisma.activity.create({
+      data: {
+        action: 'deleted',
+        entityType: 'comment',
+        entityId: deletedCommentId,
+        details: JSON.stringify({ preview: comment.content.substring(0, 100) }),
+        userId: session.user.id,
+        boardId: comment.card.column.boardId,
+        cardId: comment.card.id,
+      },
     });
 
     return NextResponse.json({ message: 'Comment deleted successfully' });

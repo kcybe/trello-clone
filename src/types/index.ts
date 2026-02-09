@@ -10,6 +10,8 @@ export type ActivityType =
   | 'card_deleted'
   | 'card_duplicated'
   | 'comment_added'
+  | 'comment_updated'
+  | 'comment_deleted'
   | 'due_date_set'
   | 'due_date_changed'
   | 'label_added'
@@ -18,6 +20,9 @@ export type ActivityType =
 export type Activity = {
   id: string;
   type: ActivityType;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
   cardId: string;
   cardTitle: string;
   fromColumnId?: string;
@@ -25,8 +30,16 @@ export type Activity = {
   toColumnId?: string;
   toColumnName?: string;
   description?: string;
+  details?: string;
   timestamp: Date;
-  user?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  };
+  userId?: string;
+  boardId?: string;
 };
 
 // Label Types
@@ -60,9 +73,18 @@ export type Checklist = {
 // Comment Types
 export type Comment = {
   id: string;
-  author: string;
   text: string;
   createdAt: Date;
+  updatedAt?: Date;
+  userId: string;
+  cardId: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  };
+  author?: string;
 };
 
 // Card Types
