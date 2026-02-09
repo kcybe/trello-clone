@@ -22,6 +22,7 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
 - 🔗 **Card Relations** - Link cards between boards and show dependencies/blockers
 - 🤖 **AI Suggestions** - Get AI-powered suggestions for card titles, descriptions, labels, and checklists
+- 📈 **Calendar Enhancements** - Gantt chart view, milestone tracking, and date dependencies
 
 ## Tech Stack
 
@@ -250,6 +251,50 @@ Each activity shows:
   - Title: "[Bug] Fix the login bug on the dashboard"
   - Labels: Bug, High Priority (if urgent detected)
   - Checklist: Reproduce → Identify root cause → Fix → Test
+
+#### Calendar Enhancements 📈
+1. **Gantt Chart View:** Visual timeline of all cards with due dates
+   - Drag to adjust dates
+   - Zoom in/out for detail levels
+   - Show/hide dependencies
+   - Highlight critical path
+   - Toggle progress indicators
+
+2. **Milestone Tracking:** Create and track important deadlines
+   - Add milestones with target dates
+   - Link cards to milestones
+   - Track completion progress
+   - Status badges (On Track, At Risk, Missed)
+   - Visual progress bars
+
+3. **Date Dependencies:** Visualize card relationships
+   - Auto-detect dependencies from due dates
+   - Multiple dependency types (Finish-to-Start, Start-to-Start, etc.)
+   - Dependency chain visualization
+   - Violation detection (circular, future start, gaps)
+   - Critical path highlighting
+
+**Gantt Chart Features:**
+- Weekly/monthly/quarterly views
+- Color-coded by column
+- Progress tracking
+- Dependency lines
+- Weekend/holiday highlighting
+- Today indicator
+
+**Milestone Features:**
+- Upcoming/In Progress/Missed groupings
+- Card linking to milestones
+- Progress percentage
+- Target date tracking
+- Color-coded status
+
+**Dependency Features:**
+- Automatic detection from due dates
+- Manual dependency creation
+- Violation warnings
+- Chain visualization
+- Lag time tracking
 
 #### Dark Mode
 1. Click the moon/sun icon in the header
