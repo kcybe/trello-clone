@@ -87,6 +87,34 @@ export type Comment = {
   author?: string;
 };
 
+// Card Relation Types
+export type RelationType = 'blocks' | 'blocked_by' | 'depends_on' | 'related_to';
+
+export type CardSummary = {
+  id: string;
+  title: string;
+  boardId: string;
+  boardName: string;
+  columnId: string;
+  columnName: string;
+};
+
+export type CardRelation = {
+  id: string;
+  sourceCardId: string;
+  targetCardId: string;
+  relationType: RelationType;
+  createdAt: string;
+  updatedAt: string;
+  sourceCard?: CardSummary;
+  targetCard?: CardSummary;
+};
+
+export type CreateCardRelationRequest = {
+  targetCardId: string;
+  relationType: RelationType;
+};
+
 // Card Types
 export type Card = {
   id: string;
@@ -101,6 +129,7 @@ export type Card = {
   comments?: Comment[];
   archived?: boolean;
   color?: string;
+  relations?: CardRelation[];
 };
 
 // Column Types

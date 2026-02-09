@@ -260,7 +260,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'Invalid search query',
-          details: error.errors,
+          details: (error as z.ZodError).errors,
         },
         { status: 400 }
       );

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ code: st
       data: {
         boardId: boardShare.board.id,
         userId: session.user.id,
-        role: boardShare.canEdit ? 'member' : 'viewer',
+        role: boardShare.permission === 'edit' ? 'member' : 'viewer',
       },
     });
 

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 import { CardItemProps } from '../../types';
+import { DependencyIndicators, isCardBlocked, isCardBlocking } from '../DependencyIndicators';
 
 export function CardItem({
   card,
@@ -41,11 +42,17 @@ export function CardItem({
     return { checked, total: checklist.items.length };
   };
 
+  const relations = card.relations || [];
+  const blocked = isCardBlocked(relations);
+  const blocking = isCardBlocking(relations);
+
   return (
     <Card
       onClick={onSelect}
       className={`cursor-grab active:cursor-grabbing ${card.color || ''} ${
         isSelected ? 'shadow-lg ring-2 ring-primary' : ''
+      } ${blocked ? 'ring-2 ring-red-300 dark:ring-red-700' : ''} ${
+        blocking && !blocked ? 'ring-2 ring-yellow-300 dark:ring-yellow-700' : ''
       }`}
     >
       <CardContent className={`${isCompact ? 'p-2' : 'p-3'}`}>
@@ -74,6 +81,11 @@ export function CardItem({
               ? card.description.substring(0, 100) + '...'
               : card.description}
           </div>
+        )}
+
+        {/* Dependency indicators */}
+        {!isCompact && relations.length > 0 && (
+          <DependencyIndicators relations={relations} compact={isCompact} />
         )}
 
         <div className="flex items-start justify-between gap-2 mt-1">

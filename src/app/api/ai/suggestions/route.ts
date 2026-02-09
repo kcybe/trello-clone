@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DEFAULT_PATTERNS, CardAISuggestion } from '@/features/ai-suggestions/types';
+import {
+  DEFAULT_PATTERNS,
+  CardAISuggestion,
+  CardLabelsSuggestion,
+  CardChecklistSuggestion,
+  CardDescriptionSuggestion,
+  CardTitleSuggestion,
+} from '@/features/ai-suggestions/types';
 
 // Simulated AI suggestion generator
 // In production, this would call an actual AI API (OpenAI, Anthropic, etc.)
-function generateSuggestions(content: string, types: string[]): CardAISuggestion[] {
-  const suggestions: CardAISuggestion[] = [];
+function generateSuggestions(
+  content: string,
+  types: string[]
+): Array<
+  CardTitleSuggestion | CardDescriptionSuggestion | CardLabelsSuggestion | CardChecklistSuggestion
+> {
+  const suggestions: Array<
+    CardTitleSuggestion | CardDescriptionSuggestion | CardLabelsSuggestion | CardChecklistSuggestion
+  > = [];
   const lowerContent = content.toLowerCase();
 
   // Generate title suggestions
@@ -43,10 +57,7 @@ function generateSuggestions(content: string, types: string[]): CardAISuggestion
   return suggestions;
 }
 
-function generateTitleSuggestions(
-  content: string,
-  lowerContent: string
-): CardAISuggestion & { type: 'title' } {
+function generateTitleSuggestions(content: string, lowerContent: string): CardTitleSuggestion {
   const suggestions: string[] = [];
 
   // Check for patterns
@@ -94,7 +105,7 @@ function generateTitleSuggestions(
 function generateDescriptionSuggestions(
   content: string,
   lowerContent: string
-): CardAISuggestion & { type: 'description' } {
+): CardDescriptionSuggestion {
   const suggestions: string[] = [];
   let template = '';
 
@@ -183,7 +194,7 @@ ${content}
   };
 }
 
-function generateLabelSuggestions(lowerContent: string): CardAISuggestion & { type: 'labels' } {
+function generateLabelSuggestions(lowerContent: string): CardLabelsSuggestion {
   const suggestions: Array<{ text: string; color: string }> = [];
   const usedLabels = new Set<string>();
 
@@ -225,9 +236,7 @@ function generateLabelSuggestions(lowerContent: string): CardAISuggestion & { ty
   };
 }
 
-function generateChecklistSuggestions(
-  lowerContent: string
-): CardAISuggestion & { type: 'checklist' } {
+function generateChecklistSuggestions(lowerContent: string): CardChecklistSuggestion {
   const suggestions: Array<{ text: string; checked: boolean }> = [];
 
   for (const checklistPattern of DEFAULT_PATTERNS.checklistItems) {

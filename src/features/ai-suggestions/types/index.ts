@@ -71,8 +71,15 @@ export interface SuggestionState {
 // Pattern matching rules for suggestions
 export interface SuggestionPattern {
   keywords: string[];
-  labels: string[];
-  checklistItems: string[];
+  labels: Array<{
+    keywords: string[];
+    label: string;
+    color: string;
+  }>;
+  checklistItems: Array<{
+    keywords: string[];
+    items: string[];
+  }>;
   titleTemplates: string[];
 }
 

@@ -56,7 +56,7 @@ export async function GET(req: Request, props: { params: Promise<{ code: string 
     return NextResponse.json({
       board: boardShare.board,
       shareToken: boardShare.shareToken,
-      canEdit: boardShare.canEdit,
+      canEdit: boardShare.permission === 'edit',
       isMember: !!isMember,
       isOwner: session?.user?.id === boardShare.board.ownerId,
     });
