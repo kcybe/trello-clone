@@ -20,6 +20,8 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - 💬 **Comments** - Add, edit, and delete comments on cards
 - 📊 **Activity Feed** - Track all changes to cards and boards
 - 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
+- 🔗 **Card Relations** - Link cards between boards and show dependencies/blockers
+- 🤖 **AI Suggestions** - Get AI-powered suggestions for card titles, descriptions, labels, and checklists
 
 ## Tech Stack
 
@@ -132,6 +134,20 @@ Templates are organized into the following categories:
 | PUT | `/api/activities/[id]` | Update an activity (admin) |
 | DELETE | `/api/activities/[id]` | Delete an activity (admin) |
 
+### Card Relations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cards/[cardId]/relations` | Get all relations for a card |
+| POST | `/api/cards/[cardId]/relations` | Create a new card relation |
+| DELETE | `/api/cards/[cardId]/relations?targetCardId=` | Delete a card relation |
+
+### AI Suggestions API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai/suggestions` | Generate AI suggestions for cards |
+
 ## Usage
 
 ### Basic
@@ -193,6 +209,47 @@ Each activity shows:
 2. **Save as Template:** Save any existing board as a custom template for future use
 3. **Template Categories:** Choose from Kanban, Scrum, Bug Tracking, Marketing, or Weekly Review templates
 4. **My Templates:** Access your custom-created templates in the "My Templates" category
+
+#### Card Relations 🔗
+1. **Link Cards:** Open a card and navigate to the Relations section
+2. **Relation Types:**
+   - **Blocks:** This card is blocking another card
+   - **Blocked By:** This card is blocked by another card
+   - **Depends On:** This card depends on another card
+   - **Related To:** This card is related to another card
+3. **Cross-Board Links:** Link cards from different boards
+4. **Visual Indicators:** Cards show blocking indicators when they have dependencies
+5. **Remove Relations:** Click the unlink icon to remove a relation
+
+**Use Cases:**
+- Track cards that depend on completion of other cards
+- Show blocking relationships in workflows
+- Link related cards across different boards
+- Identify blockers that prevent progress
+
+#### AI Suggestions 🤖
+1. **Open AI Modal:** Click the sparkles icon in any card editor
+2. **Content Analysis:** AI analyzes your card content for patterns
+3. **Suggestion Types:**
+   - **Title:** Generate improved card titles
+   - **Description:** Create structured description templates
+   - **Labels:** Auto-detect and suggest labels based on keywords
+   - **Checklist:** Generate task checklists based on content type
+4. **Confidence Scores:** Each suggestion shows a confidence rating
+5. **Apply Suggestions:** Select and apply suggestions with one click
+
+**Pattern Detection:**
+- Bug-related content → Bug labels, bug fix checklists
+- Feature requests → Feature labels, implementation checklists
+- Documentation tasks → Documentation labels, writing checklists
+- Urgent items → High Priority labels
+
+**Example:**
+- Input: "Fix the login bug on the dashboard"
+- AI Suggestions:
+  - Title: "[Bug] Fix the login bug on the dashboard"
+  - Labels: Bug, High Priority (if urgent detected)
+  - Checklist: Reproduce → Identify root cause → Fix → Test
 
 #### Dark Mode
 1. Click the moon/sun icon in the header

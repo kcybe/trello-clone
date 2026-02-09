@@ -155,6 +155,8 @@ model Card {
   activities  Activity[]
   attachments Attachment[]
   checklists  Checklist[]
+  outgoingRelations CardRelation[] @relation("CardRelationsSource")
+  incomingRelations CardRelation[] @relation("CardRelationsTarget")
 
   @@index([columnId])
 }
@@ -230,4 +232,22 @@ model ChecklistItem {
   checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 
   @@index([checklistId])
+}
+
+// ============ Card Relations Models ============
+
+model CardRelation {
+  id          String   @id @default(cuid())
+  sourceCardId String
+  targetCardId String
+  relationType String   @default("blocks") // blocks, blocked_by, depends_on, related_to
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sourceCard  Card     @relation("CardRelationsSource", fields: [sourceCardId], references: [id], onDelete: Cascade)
+  targetCard  Card     @relation("CardRelationsTarget", fields: [targetCardId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceCardId, targetCardId])
+  @@index([sourceCardId])
+  @@index([targetCardId])
 }

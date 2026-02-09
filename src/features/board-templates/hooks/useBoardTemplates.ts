@@ -55,29 +55,32 @@ export function useBoardTemplates(): UseBoardTemplatesReturn {
     }
   }, []);
 
-  const saveAsTemplate = useCallback(async (data: SaveTemplateData): Promise<BoardTemplate | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/templates/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save template');
+  const saveAsTemplate = useCallback(
+    async (data: SaveTemplateData): Promise<BoardTemplate | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/templates/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save template');
+        }
+        const template = await response.json();
+        setTemplates(prev => [...prev, template]);
+        return template;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save template');
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-      const template = await response.json();
-      setTemplates(prev => [...prev, template]);
-      return template;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save template');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const copyFromTemplate = useCallback(
     async (data: CopyFromTemplateData): Promise<BoardTemplate | null> => {
