@@ -45,6 +45,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ cardId: 
     const outgoingRelations = await prisma.cardRelation.findMany({
       where: { sourceCardId: cardId },
       include: {
+        sourceCard: {
+          include: {
+            column: {
+              include: {
+                board: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+        },
         targetCard: {
           include: {
             column: {
@@ -64,6 +75,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ cardId: 
       where: { targetCardId: cardId },
       include: {
         sourceCard: {
+          include: {
+            column: {
+              include: {
+                board: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+        },
+        targetCard: {
           include: {
             column: {
               include: {
@@ -241,7 +263,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ car
   } catch (error) {
     console.error('Error creating card relation:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Failed to create relation' }, { status: 500 });
   }

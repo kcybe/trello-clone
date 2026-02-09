@@ -311,6 +311,8 @@ export function useCards(): UseCardsReturn {
       author: newCommentAuthor.trim(),
       text: newCommentText.trim(),
       createdAt: new Date(),
+      userId: 'current-user', // TODO: Get actual user ID from auth
+      cardId: editingCard.card.id,
     };
     setEditingCard({
       ...editingCard,

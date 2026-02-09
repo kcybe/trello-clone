@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DEFAULT_PATTERNS, CardAISuggestion } from '../../features/ai-suggestions/types';
+import { DEFAULT_PATTERNS, CardAISuggestion } from '@/features/ai-suggestions/types';
 
 // Simulated AI suggestion generator
 // In production, this would call an actual AI API (OpenAI, Anthropic, etc.)

@@ -1,24 +1,25 @@
 // AI Suggestion Types
 
-export interface CardAISuggestion {
+export interface CardAISuggestion<T = string, Extra = {}> {
   type: 'title' | 'description' | 'labels' | 'checklist';
   confidence: number;
-  suggestions: string[];
+  suggestions: T[];
   reasoning?: string;
+  template?: string;
 }
 
-export interface CardTitleSuggestion extends CardAISuggestion {
+export interface CardTitleSuggestion extends CardAISuggestion<string> {
   type: 'title';
   suggestions: string[];
 }
 
-export interface CardDescriptionSuggestion extends CardAISuggestion {
+export interface CardDescriptionSuggestion extends CardAISuggestion<string> {
   type: 'description';
   suggestions: string[];
   template?: string;
 }
 
-export interface CardLabelsSuggestion extends CardAISuggestion {
+export interface CardLabelsSuggestion extends CardAISuggestion<{ text: string; color: string }> {
   type: 'labels';
   suggestions: Array<{
     text: string;
@@ -26,7 +27,10 @@ export interface CardLabelsSuggestion extends CardAISuggestion {
   }>;
 }
 
-export interface CardChecklistSuggestion extends CardAISuggestion {
+export interface CardChecklistSuggestion extends CardAISuggestion<{
+  text: string;
+  checked: boolean;
+}> {
   type: 'checklist';
   suggestions: Array<{
     text: string;
@@ -35,7 +39,9 @@ export interface CardChecklistSuggestion extends CardAISuggestion {
 }
 
 export interface AISuggestionsResponse {
-  suggestions: CardAISuggestion[];
+  suggestions: Array<
+    CardTitleSuggestion | CardDescriptionSuggestion | CardLabelsSuggestion | CardChecklistSuggestion
+  >;
   generatedAt: string;
   model?: string;
 }
@@ -55,7 +61,9 @@ export interface GenerateSuggestionsRequest {
 }
 
 export interface SuggestionState {
-  suggestions: CardAISuggestion[];
+  suggestions: Array<
+    CardTitleSuggestion | CardDescriptionSuggestion | CardLabelsSuggestion | CardChecklistSuggestion
+  >;
   isLoading: boolean;
   error: string | null;
 }

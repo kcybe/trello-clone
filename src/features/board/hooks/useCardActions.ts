@@ -98,18 +98,19 @@ export function useCardActions(options: UseCardActionOptions) {
 
   const handleUpdateCard = () => {
     if (!editingCard || !currentBoard) return;
-    updateCard(editingCard.columnId, editingCard.id, {
-      title: editingCard.title,
-      description: editingCard.description,
-      labels: editingCard.labels,
-      assignee: editingCard.assignee || undefined,
-      attachments: editingCard.attachments,
-      checklists: editingCard.checklists,
-      dueDate: editingCard.dueDate ? new Date(editingCard.dueDate) : null,
-      comments: editingCard.comments,
-      color: editingCard.color || undefined,
+    const { card } = editingCard;
+    updateCard(editingCard.columnId, card.id, {
+      title: card.title,
+      description: card.description,
+      labels: card.labels,
+      assignee: card.assignee || undefined,
+      attachments: card.attachments,
+      checklists: card.checklists,
+      dueDate: card.dueDate ? new Date(card.dueDate) : null,
+      comments: card.comments,
+      color: card.color || undefined,
     });
-    addActivity('card_edited', editingCard.id, editingCard.title, {
+    addActivity('card_edited', card.id, card.title, {
       description: 'Changed: title, description',
     });
   };
