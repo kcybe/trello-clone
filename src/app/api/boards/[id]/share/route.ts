@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Permission levels in order of access (lowest to highest)
+const PERMISSION_LEVELS = ['read', 'comment', 'edit'] as const;
+export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
+
+function hasPermission(
+  userPermission: PermissionLevel,
+  requiredPermission: PermissionLevel
+): boolean {
+  const userLevelIndex = PERMISSION_LEVELS.indexOf(userPermission);
+  const requiredLevelIndex = PERMISSION_LEVELS.indexOf(requiredPermission);
+  return userLevelIndex >= requiredLevelIndex;
+}
+
 function generateShareToken(): string {
   return `share_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
@@ -43,7 +56,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       boardId,
       isPublic: false,
       shareToken: null,
-      canEdit: false,
+      permission: 'read',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -78,7 +91,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       boardId,
       shareToken,
       isPublic: true,
-      canEdit: false,
+      permission: 'read',
     },
     update: {
       shareToken,
@@ -109,7 +122,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const body = await request.json();
-    const { isPublic, canEdit } = body;
+    const { isPublic, permission } = body;
+
+    // Validate permission if provided
+    if (permission && !PERMISSION_LEVELS.includes(permission as PermissionLevel)) {
+      return NextResponse.json(
+        { error: 'Invalid permission level. Must be: read, comment, or edit' },
+        { status: 400 }
+      );
+    }
 
     // Check if share settings exist
     const existingSettings = await prisma.boardShare.findUnique({
@@ -127,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { boardId },
       data: {
         isPublic: isPublic ?? existingSettings.isPublic,
-        canEdit: canEdit ?? existingSettings.canEdit,
+        permission: permission ?? existingSettings.permission,
       },
     });
 

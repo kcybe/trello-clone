@@ -1,6 +1,15 @@
 'use client';
 
-import { Share2, Globe, Lock, ExternalLink } from 'lucide-react';
+import {
+  Share2,
+  Globe,
+  Lock,
+  ExternalLink,
+  Eye,
+  MessageSquare,
+  Pencil,
+  ChevronDown,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -10,12 +19,18 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { useState, useEffect } from 'react';
 
-import { ShareSettings, UpdateShareSettingsRequest } from '../types';
+import { BoardPermission } from '../types';
 import { CopyInviteButton } from './CopyInviteButton';
 
 interface ShareModalProps {
@@ -25,11 +40,37 @@ interface ShareModalProps {
   boardName: string;
 }
 
+const PERMISSION_OPTIONS: {
+  value: BoardPermission;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: 'read',
+    label: 'Read-only',
+    description: 'Can view but cannot make changes',
+    icon: <Eye className="h-4 w-4" />,
+  },
+  {
+    value: 'comment',
+    label: 'Comment',
+    description: 'Can view and add comments',
+    icon: <MessageSquare className="h-4 w-4" />,
+  },
+  {
+    value: 'edit',
+    label: 'Edit',
+    description: 'Can view, comment, and edit',
+    icon: <Pencil className="h-4 w-4" />,
+  },
+];
+
 export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalProps) {
-  const [shareSettings, setShareSettings] = useState<ShareSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
+  const [permission, setPermission] = useState<BoardPermission>('read');
   const [inviteLink, setInviteLink] = useState('');
 
   useEffect(() => {
@@ -45,17 +86,18 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
       const response = await fetch(`/api/boards/${boardId}/share`);
       if (response.ok) {
         const data = await response.json();
-        setShareSettings(data);
         setIsPublic(data.isPublic || false);
+        setPermission(data.permission || 'read');
         if (data.shareToken) {
           setInviteLink(`${window.location.origin}/board/shared/${data.shareToken}`);
         }
       } else {
         // Create default settings if not exists
         setIsPublic(false);
+        setPermission('read');
         setInviteLink('');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load share settings');
     } finally {
       setIsLoading(false);
@@ -73,13 +115,12 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
 
       if (response.ok) {
         const data = await response.json();
-        setShareSettings(data);
         setInviteLink(data.shareUrl);
         setIsPublic(true);
       } else {
         setError('Failed to generate share link');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to generate share link');
     } finally {
       setIsLoading(false);
@@ -103,21 +144,38 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
       } else {
         setError('Failed to update share settings');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to update share settings');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    if (inviteLink) {
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-      } catch (err) {
-        console.error('Failed to copy:', err);
+  const handlePermissionChange = async (newPermission: BoardPermission) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/boards/${boardId}/share`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permission: newPermission }),
+      });
+
+      if (response.ok) {
+        setPermission(newPermission);
+      } else {
+        setError('Failed to update permission level');
       }
+    } catch {
+      setError('Failed to update permission level');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const getSelectedPermissionInfo = () => {
+    return PERMISSION_OPTIONS.find(opt => opt.value === permission);
   };
 
   return (
@@ -184,6 +242,43 @@ export function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalPr
               </div>
             )}
           </div>
+
+          {/* Permission Level Selector */}
+          {inviteLink && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Permission Level</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild disabled={isLoading}>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      {getSelectedPermissionInfo()?.icon}
+                      {getSelectedPermissionInfo()?.label}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-full">
+                  {PERMISSION_OPTIONS.map(option => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => handlePermissionChange(option.value)}
+                      className="flex items-start gap-2 p-2"
+                    >
+                      {option.icon}
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <p className="text-xs text-muted-foreground">
+                Current: {getSelectedPermissionInfo()?.label} —{' '}
+                {getSelectedPermissionInfo()?.description}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end pt-4 border-t">

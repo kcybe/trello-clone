@@ -1,9 +1,12 @@
+// Board permission levels
+export type BoardPermission = 'read' | 'comment' | 'edit';
+
 // Board sharing types
 export interface ShareSettings {
   boardId: string;
   isPublic: boolean;
   shareToken: string | null;
-  canEdit: boolean;
+  permission: BoardPermission;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,7 +18,7 @@ export interface ShareLinkResponse {
 
 export interface UpdateShareSettingsRequest {
   isPublic?: boolean;
-  canEdit?: boolean;
+  permission?: BoardPermission;
 }
 
 export interface ShareState {

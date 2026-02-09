@@ -87,7 +87,7 @@ model BoardShare {
   boardId     String   @unique
   shareToken  String   @unique
   isPublic    Boolean  @default(false)
-  canEdit     Boolean  @default(false)
+  permission  String   @default("read") // read, comment, edit
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
