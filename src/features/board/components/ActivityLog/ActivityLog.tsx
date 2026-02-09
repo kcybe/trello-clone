@@ -11,8 +11,12 @@ import {
   Copy,
   MessageCircle,
   Calendar,
+  Tag,
+  User,
 } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Activity, ActivityType } from '@/types';
 
@@ -20,21 +24,25 @@ interface ActivityLogProps {
   activities: Activity[];
   maxItems?: number;
   className?: string;
+  compact?: boolean;
+  showCardTitle?: boolean;
 }
 
 const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
-  card_created: <Plus className="h-4 w-4" />,
-  card_moved: <Move className="h-4 w-4" />,
-  card_edited: <Edit className="h-4 w-4" />,
-  card_archived: <Archive className="h-4 w-4" />,
-  card_restored: <RotateCcw className="h-4 w-4" />,
-  card_deleted: <Trash2 className="h-4 w-4" />,
-  card_duplicated: <Copy className="h-4 w-4" />,
-  comment_added: <MessageCircle className="h-4 w-4" />,
-  due_date_set: <Calendar className="h-4 w-4" />,
-  due_date_changed: <Calendar className="h-4 w-4" />,
-  label_added: <Plus className="h-4 w-4" />,
-  member_assigned: <Plus className="h-4 w-4" />,
+  card_created: <Plus className="h-4 w-4 text-green-500" />,
+  card_moved: <Move className="h-4 w-4 text-blue-500" />,
+  card_edited: <Edit className="h-4 w-4 text-yellow-500" />,
+  card_archived: <Archive className="h-4 w-4 text-gray-500" />,
+  card_restored: <RotateCcw className="h-4 w-4 text-green-500" />,
+  card_deleted: <Trash2 className="h-4 w-4 text-red-500" />,
+  card_duplicated: <Copy className="h-4 w-4 text-purple-500" />,
+  comment_added: <MessageCircle className="h-4 w-4 text-blue-400" />,
+  comment_updated: <Edit className="h-4 w-4 text-yellow-400" />,
+  comment_deleted: <Trash2 className="h-4 w-4 text-red-400" />,
+  due_date_set: <Calendar className="h-4 w-4 text-orange-500" />,
+  due_date_changed: <Calendar className="h-4 w-4 text-orange-400" />,
+  label_added: <Tag className="h-4 w-4 text-pink-500" />,
+  member_assigned: <User className="h-4 w-4 text-indigo-500" />,
 };
 
 const ACTIVITY_LABELS: Record<ActivityType, string> = {
@@ -46,6 +54,8 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
   card_deleted: 'deleted',
   card_duplicated: 'duplicated',
   comment_added: 'commented on',
+  comment_updated: 'updated comment on',
+  comment_deleted: 'deleted comment from',
   due_date_set: 'set due date for',
   due_date_changed: 'changed due date for',
   label_added: 'added label to',
@@ -68,40 +78,62 @@ function formatTimestamp(date: Date | string): string {
 }
 
 function getActivityDescription(activity: Activity): string {
+  const cardTitle = activity.cardTitle || 'Unknown card';
+
   switch (activity.type) {
     case 'card_moved':
       if (activity.fromColumnName && activity.toColumnName) {
-        return `moved "${activity.cardTitle}" from ${activity.fromColumnName} to ${activity.toColumnName}`;
+        return `moved "${cardTitle}" from ${activity.fromColumnName} to ${activity.toColumnName}`;
       }
-      return `moved "${activity.cardTitle}"`;
+      return `moved "${cardTitle}"`;
     case 'card_created':
-      return `created "${activity.cardTitle}"`;
+      return `created "${cardTitle}"`;
     case 'card_edited':
-      return `edited "${activity.cardTitle}"`;
+      return `edited "${cardTitle}"`;
     case 'card_archived':
-      return `archived "${activity.cardTitle}"`;
+      return `archived "${cardTitle}"`;
     case 'card_restored':
-      return `restored "${activity.cardTitle}"`;
+      return `restored "${cardTitle}"`;
     case 'card_deleted':
-      return `deleted "${activity.cardTitle}"`;
+      return `deleted "${cardTitle}"`;
     case 'card_duplicated':
-      return `duplicated "${activity.cardTitle}"`;
+      return `duplicated "${cardTitle}"`;
     case 'comment_added':
-      return `commented on "${activity.cardTitle}"`;
+      return `commented on "${cardTitle}"`;
+    case 'comment_updated':
+      return `updated comment on "${cardTitle}"`;
+    case 'comment_deleted':
+      return `deleted comment from "${cardTitle}"`;
     case 'due_date_set':
-      return `set due date for "${activity.cardTitle}"`;
+      return `set due date for "${cardTitle}"`;
     case 'due_date_changed':
-      return `changed due date for "${activity.cardTitle}"`;
+      return `changed due date for "${cardTitle}"`;
     case 'label_added':
-      return `added label to "${activity.cardTitle}"`;
+      return `added label to "${cardTitle}"`;
     case 'member_assigned':
-      return `assigned member to "${activity.cardTitle}"`;
+      return `assigned member to "${cardTitle}"`;
     default:
-      return `performed action on "${activity.cardTitle}"`;
+      return `performed action on "${cardTitle}"`;
   }
 }
 
-export function ActivityLog({ activities, maxItems = 50, className }: ActivityLogProps) {
+function getUserInitials(name: string | undefined): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+export function ActivityLog({
+  activities,
+  maxItems = 50,
+  className,
+  compact = false,
+  showCardTitle = true,
+}: ActivityLogProps) {
   const displayActivities = activities.slice(0, maxItems);
 
   if (displayActivities.length === 0) {
@@ -121,33 +153,49 @@ export function ActivityLog({ activities, maxItems = 50, className }: ActivityLo
           className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
         >
           {/* User Avatar */}
-          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-            {activity.user ? (
-              <span className="text-xs font-medium text-primary">
-                {activity.user.charAt(0).toUpperCase()}
-              </span>
-            ) : (
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarImage src={activity.user?.image} alt={activity.user?.name || 'User'} />
+            <AvatarFallback className="text-xs">
+              {getUserInitials(activity.user?.name)}
+            </AvatarFallback>
+          </Avatar>
 
           {/* Activity Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-1">
-              <span className="font-medium text-sm truncate">{activity.user || 'Unknown'}</span>
+            <div className="flex items-baseline gap-1 flex-wrap">
+              <span className="font-medium text-sm truncate">
+                {activity.user?.name || 'Unknown'}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {ACTIVITY_LABELS[activity.type]}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground truncate">
-              {getActivityDescription(activity)}
-            </p>
-            {activity.description && (
-              <p className="text-xs text-muted-foreground mt-1 italic">
-                &quot;{activity.description}&quot;
+            {showCardTitle && activity.cardTitle && (
+              <p className="text-xs text-muted-foreground truncate font-medium">
+                {getActivityDescription(activity)}
               </p>
             )}
+            {!showCardTitle && (
+              <p className="text-xs text-muted-foreground truncate">
+                {getActivityDescription(activity)}
+              </p>
+            )}
+            {activity.description && (
+              <p className="text-xs text-muted-foreground mt-1 italic border-l-2 border-muted pl-2">
+                "{activity.description}"
+              </p>
+            )}
+            {activity.type === 'card_moved' && activity.fromColumnName && activity.toColumnName && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <span className="bg-muted px-1.5 py-0.5 rounded">{activity.fromColumnName}</span>
+                <Move className="h-3 w-3" />
+                <span className="bg-muted px-1.5 py-0.5 rounded">{activity.toColumnName}</span>
+              </div>
+            )}
           </div>
+
+          {/* Activity Type Icon */}
+          {!compact && <div className="flex-shrink-0">{ACTIVITY_ICONS[activity.type]}</div>}
 
           {/* Timestamp */}
           <div className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground">
@@ -156,6 +204,41 @@ export function ActivityLog({ activities, maxItems = 50, className }: ActivityLo
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+interface ActivityFeedProps extends ActivityLogProps {
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoading?: boolean;
+}
+
+export function ActivityFeed({
+  activities,
+  maxItems = 50,
+  className,
+  compact = false,
+  showCardTitle = true,
+  onLoadMore,
+  hasMore = false,
+  isLoading = false,
+}: ActivityFeedProps) {
+  return (
+    <div className={cn('flex flex-col', className)}>
+      <ActivityLog
+        activities={activities}
+        maxItems={maxItems}
+        compact={compact}
+        showCardTitle={showCardTitle}
+      />
+      {hasMore && (
+        <div className="flex justify-center p-2">
+          <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={isLoading}>
+            {isLoading ? 'Loading...' : 'Load more'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
