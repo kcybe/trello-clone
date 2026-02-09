@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
 
-      columns = JSON.parse(userTemplate.columns) as Array<{ id: string; name: string; color?: string }>;
+      columns = JSON.parse(userTemplate.columns) as Array<{
+        id: string;
+        name: string;
+        color?: string;
+      }>;
       templateOwnerId = userTemplate.ownerId;
     }
 

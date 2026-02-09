@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 import { useState, useEffect } from 'react';
 
+import { useBoardTemplates } from '../../hooks/useBoardTemplates';
 import { TemplatesModalProps, BoardTemplate, TemplateCategory } from '../../types';
 import { TemplateCard } from './TemplateCard';
-import { useBoardTemplates } from '../../hooks/useBoardTemplates';
 
 const BUILT_IN_TEMPLATES: BoardTemplate[] = [
   {
@@ -148,7 +148,11 @@ export function TemplatesModal({ open, onOpenChange, onSelectTemplate }: Templat
                   size="sm"
                   onClick={() => setActiveCategory(category)}
                 >
-                  {category === 'all' ? 'All' : category === 'user' ? 'My Templates' : CATEGORY_LABELS[category as TemplateCategory | 'user']}
+                  {category === 'all'
+                    ? 'All'
+                    : category === 'user'
+                      ? 'My Templates'
+                      : CATEGORY_LABELS[category as TemplateCategory | 'user']}
                 </Button>
               ))}
             </div>

@@ -20,6 +20,7 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - 💬 **Comments** - Add, edit, and delete comments on cards
 - 📊 **Activity Feed** - Track all changes to cards and boards
 - 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
+- 🔗 **Card Relations** - Link cards between boards and show dependencies/blockers
 
 ## Tech Stack
 
@@ -132,6 +133,14 @@ Templates are organized into the following categories:
 | PUT | `/api/activities/[id]` | Update an activity (admin) |
 | DELETE | `/api/activities/[id]` | Delete an activity (admin) |
 
+### Card Relations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cards/[cardId]/relations` | Get all relations for a card |
+| POST | `/api/cards/[cardId]/relations` | Create a new card relation |
+| DELETE | `/api/cards/[cardId]/relations?targetCardId=` | Delete a card relation |
+
 ## Usage
 
 ### Basic
@@ -193,6 +202,23 @@ Each activity shows:
 2. **Save as Template:** Save any existing board as a custom template for future use
 3. **Template Categories:** Choose from Kanban, Scrum, Bug Tracking, Marketing, or Weekly Review templates
 4. **My Templates:** Access your custom-created templates in the "My Templates" category
+
+#### Card Relations 🔗
+1. **Link Cards:** Open a card and navigate to the Relations section
+2. **Relation Types:**
+   - **Blocks:** This card is blocking another card
+   - **Blocked By:** This card is blocked by another card
+   - **Depends On:** This card depends on another card
+   - **Related To:** This card is related to another card
+3. **Cross-Board Links:** Link cards from different boards
+4. **Visual Indicators:** Cards show blocking indicators when they have dependencies
+5. **Remove Relations:** Click the unlink icon to remove a relation
+
+**Use Cases:**
+- Track cards that depend on completion of other cards
+- Show blocking relationships in workflows
+- Link related cards across different boards
+- Identify blockers that prevent progress
 
 #### Dark Mode
 1. Click the moon/sun icon in the header

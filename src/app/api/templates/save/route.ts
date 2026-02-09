@@ -35,7 +35,10 @@ export async function POST(req: NextRequest) {
 
     // Only board owner can save as template
     if (board.ownerId !== session.user.id) {
-      return NextResponse.json({ error: 'Only the board owner can save it as a template' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Only the board owner can save it as a template' },
+        { status: 403 }
+      );
     }
 
     // Extract column structure from board
