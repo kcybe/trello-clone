@@ -58,7 +58,7 @@ function buildDateFilter(dateFilter?: string, specificDate?: string | null) {
       };
     case 'thisWeek':
       const endOfWeek = new Date(today);
-      endOfWeek.setDate(today.getDate() + (5 - today.getDay())); // Friday
+      endOfWeek.setDate(today.getDate() + (5 - today.getDay()));
       return {
         dueDate: {
           gte: today,
@@ -108,6 +108,26 @@ function buildDateFilter(dateFilter?: string, specificDate?: string | null) {
   }
 }
 
+// Calculate relevance score for sorting
+function calculateRelevance(
+  card: { title: string; description?: string | null },
+  query: string
+): number {
+  const queryLower = query.toLowerCase();
+  const titleLower = card.title.toLowerCase();
+  const descLower = (card.description || '').toLowerCase();
+
+  let score = 0;
+
+  if (titleLower === queryLower) score += 10;
+  else if (titleLower.startsWith(queryLower)) score += 8;
+  else if (titleLower.includes(queryLower)) score += 5;
+
+  if (descLower.includes(queryLower)) score += 2;
+
+  return score;
+}
+
 // GET /api/search - Search cards with filters
 export async function GET(req: NextRequest) {
   try {
@@ -118,7 +138,6 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
 
-    // Parse query parameters
     const query: SearchFilters = {
       query: searchParams.get('query') || undefined,
       labels: searchParams.get('labels')?.split(',').filter(Boolean) || undefined,
@@ -130,13 +149,10 @@ export async function GET(req: NextRequest) {
       offset: parseInt(searchParams.get('offset') || '0', 10),
     };
 
-    // Validate query
     const validatedQuery = searchQuerySchema.parse(query);
 
-    // Build Prisma where clause
     const where: Record<string, unknown> = {};
 
-    // Text search (title and description)
     if (validatedQuery.query) {
       where.OR = [
         { title: { contains: validatedQuery.query } },
@@ -144,9 +160,7 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // Label filter (via column labels for now, cards can have labels too)
     if (validatedQuery.labels && validatedQuery.labels.length > 0) {
-      // Labels are on columns, filter boards by column labels
       where.column = {
         labels: {
           some: {
@@ -156,7 +170,6 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Assignee filter
     if (validatedQuery.assignees && validatedQuery.assignees.length > 0) {
       where.assignees = {
         some: {
@@ -169,20 +182,17 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Date filter
     const dateFilter = buildDateFilter(validatedQuery.dateFilter, validatedQuery.specificDate);
     if (Object.keys(dateFilter).length > 0) {
       Object.assign(where, dateFilter);
     }
 
-    // Board filter
     if (validatedQuery.boardId) {
       where.column = {
         ...((where.column as object) || {}),
         boardId: validatedQuery.boardId,
       };
     } else {
-      // User can only see boards they have access to
       where.column = {
         ...((where.column as object) || {}),
         board: {
@@ -191,7 +201,6 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Execute search
     const [cards, totalCount] = await Promise.all([
       prisma.card.findMany({
         where,
@@ -214,12 +223,11 @@ export async function GET(req: NextRequest) {
       prisma.card.count({ where }),
     ]);
 
-    // Transform results
     const results = cards.map(card => ({
       id: card.id,
       title: card.title,
       description: card.description || undefined,
-      labels: [], // Labels are on columns, would need separate query
+      labels: [],
       assignee: card.assignees[0]?.name,
       assignees: card.assignees,
       dueDate: card.dueDate,
@@ -262,30 +270,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Calculate relevance score for sorting
-function calculateRelevance(
-  card: { title: string; description?: string | null },
-  query: string
-): number {
-  const queryLower = query.toLowerCase();
-  const titleLower = card.title.toLowerCase();
-  const descLower = (card.description || '').toLowerCase();
-
-  let score = 0;
-
-  // Exact match in title
-  if (titleLower === queryLower) score += 10;
-  // Starts with query
-  else if (titleLower.startsWith(queryLower)) score += 8;
-  // Contains query in title
-  else if (titleLower.includes(queryLower)) score += 5;
-
-  // Match in description
-  if (descLower.includes(queryLower)) score += 2;
-
-  return score;
-}
-
 // POST /api/search - Advanced search with body
 export async function POST(req: NextRequest) {
   try {
@@ -297,7 +281,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedQuery = searchQuerySchema.parse(body);
 
-    // Build Prisma where clause (same as GET)
     const where: Record<string, unknown> = {};
 
     if (validatedQuery.query) {
