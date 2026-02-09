@@ -22,6 +22,7 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
 - 🔗 **Card Relations** - Link cards between boards and show dependencies/blockers
 - 🤖 **AI Suggestions** - Get AI-powered suggestions for card titles, descriptions, labels, and checklists
+- 🗳️ **Card Voting & Polls** - Vote on cards and create polls for team decisions
 
 ## Tech Stack
 
@@ -250,6 +251,38 @@ Each activity shows:
   - Title: "[Bug] Fix the login bug on the dashboard"
   - Labels: Bug, High Priority (if urgent detected)
   - Checklist: Reproduce → Identify root cause → Fix → Test
+
+#### Card Voting & Polls 🗳️
+1. **Vote on Cards:** Click the thumbs up button to vote on cards
+2. **Create Polls:** Create polls to gather team input on decisions
+3. **Poll Options:** Add multiple choice options to polls
+4. **Multiple Choice:** Allow users to select multiple options
+5. **Poll Results:** View real-time results with percentages
+
+**Voting Features:**
+- Simple card voting with thumbs up
+- Vote count display
+- Toggle vote on/off
+- Compact and full voting button variants
+
+**Poll Features:**
+- Create polls with custom questions
+- Add 2+ options to each poll
+- Single or multiple choice voting
+- Poll expiration date
+- Real-time result updates
+- Visual progress bars
+- Leading option highlighting
+- Close/reopen polls
+- Delete polls
+
+**Poll Workflow:**
+1. Click "Create Poll" in a card
+2. Enter your question
+3. Add at least 2 options
+4. Optionally set an end date
+5. Enable "Allow multiple choices" if needed
+6. Share with your team
 
 #### Dark Mode
 1. Click the moon/sun icon in the header
