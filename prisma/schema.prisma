@@ -27,6 +27,7 @@ model User {
   cardsAssigned Card[]    @relation("CardAssignees")
   comments      Comment[]
   activities    Activity[]
+  timeEntries   TimeEntry[]
 }
 
 model Session {
@@ -147,6 +148,7 @@ model Card {
   position    Int
   columnId    String
   dueDate     DateTime?
+  totalTime   Int       @default(0) // Cached total duration in seconds
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -158,6 +160,7 @@ model Card {
   checklists  Checklist[]
   outgoingRelations CardRelation[] @relation("CardRelationsSource")
   incomingRelations CardRelation[] @relation("CardRelationsTarget")
+  timeEntries TimeEntry[]
 
   @@index([columnId])
 }
@@ -251,6 +254,26 @@ model CardRelation {
   @@unique([sourceCardId, targetCardId])
   @@index([sourceCardId])
   @@index([targetCardId])
+}
+
+// ============ Time Tracking Models ============
+
+model TimeEntry {
+  id        String   @id @default(cuid())
+  cardId    String
+  userId    String
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int      // Duration in seconds (calculated or manual)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+  @@index([userId])
 }
 
 // ============ Integration Models ============
