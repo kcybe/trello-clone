@@ -149,6 +149,14 @@ Templates are organized into the following categories:
 |--------|----------|-------------|
 | POST | `/api/ai/suggestions` | Generate AI suggestions for cards |
 
+### Integrations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/integrations` | List all integrations |
+| POST | `/api/integrations` | Create a new integration |
+| POST | `/api/integrations/webhook` | Send webhook notification to enabled integrations |
+
 ## Usage
 
 ### Basic
@@ -283,6 +291,40 @@ Each activity shows:
 4. Optionally set an end date
 5. Enable "Allow multiple choices" if needed
 6. Share with your team
+
+#### Slack/Discord Integrations 🔔
+1. **Connect Platforms:** Add Slack or Discord webhooks to receive notifications
+2. **Customize Events:** Choose which events trigger notifications
+3. **Rich Notifications:** Get formatted messages with card details
+4. **Test Integration:** Send a test notification to verify your setup
+
+**Supported Events:**
+- 📋 Card Created
+- 🔄 Card Moved
+- ✏️ Card Edited
+- 🗑️ Card Deleted
+- 💬 Comment Added
+- 📅 Due Date Set
+- 👤 Member Assigned
+
+**Slack Integration:**
+1. Create an incoming webhook in Slack
+2. Copy the webhook URL
+3. Add integration in Trello Clone
+4. Select events to notify
+
+**Discord Integration:**
+1. Create a webhook in your Discord channel
+2. Copy the webhook URL
+3. Add integration in Trello Clone
+4. Select events to notify
+
+**Features:**
+- Toggle integrations on/off
+- Test notifications before saving
+- Rich embed formatting
+- Event filtering
+- Real-time notifications
 
 #### Dark Mode
 1. Click the moon/sun icon in the header
