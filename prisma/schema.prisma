@@ -78,6 +78,7 @@ model Board {
   columns    Column[]
   activities Activity[]
   share      BoardShare?
+  integrations IntegrationConfig[]
 
   @@index([ownerId])
 }
@@ -250,4 +251,25 @@ model CardRelation {
   @@unique([sourceCardId, targetCardId])
   @@index([sourceCardId])
   @@index([targetCardId])
+}
+
+// ============ Integration Models ============
+
+/// IntegrationConfig stores webhook configurations for Slack/Discord integrations
+model IntegrationConfig {
+  id          String   @id @default(cuid())
+  type        String   // slack | discord
+  name        String
+  webhookUrl  String
+  channelId   String?
+  boardId     String
+  enabled     Boolean  @default(true)
+  events      String   // JSON array of event types: card_created, card_assigned, card_completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([type])
 }

@@ -22,7 +22,7 @@ A simple Kanban board for task management built with Next.js, shadcn/ui, and Tai
 - 📑 **Board Templates** - Create boards from templates or save boards as templates for reuse
 - 🔗 **Card Relations** - Link cards between boards and show dependencies/blockers
 - 🤖 **AI Suggestions** - Get AI-powered suggestions for card titles, descriptions, labels, and checklists
-- 📈 **Calendar Enhancements** - Gantt chart view, milestone tracking, and date dependencies
+- 🗳️ **Card Voting & Polls** - Vote on cards and create polls for team decisions
 
 ## Tech Stack
 
@@ -149,6 +149,14 @@ Templates are organized into the following categories:
 |--------|----------|-------------|
 | POST | `/api/ai/suggestions` | Generate AI suggestions for cards |
 
+### Integrations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/integrations` | List all integrations |
+| POST | `/api/integrations` | Create a new integration |
+| POST | `/api/integrations/webhook` | Send webhook notification to enabled integrations |
+
 ## Usage
 
 ### Basic
@@ -252,75 +260,71 @@ Each activity shows:
   - Labels: Bug, High Priority (if urgent detected)
   - Checklist: Reproduce → Identify root cause → Fix → Test
 
-#### Calendar Enhancements 📈
-1. **Gantt Chart View:** Visual timeline of all cards with due dates
-   - Drag to adjust dates
-   - Zoom in/out for detail levels
-   - Show/hide dependencies
-   - Highlight critical path
-   - Toggle progress indicators
+#### Card Voting & Polls 🗳️
+1. **Vote on Cards:** Click the thumbs up button to vote on cards
+2. **Create Polls:** Create polls to gather team input on decisions
+3. **Poll Options:** Add multiple choice options to polls
+4. **Multiple Choice:** Allow users to select multiple options
+5. **Poll Results:** View real-time results with percentages
 
-2. **Milestone Tracking:** Create and track important deadlines
-   - Add milestones with target dates
-   - Link cards to milestones
-   - Track completion progress
-   - Status badges (On Track, At Risk, Missed)
-   - Visual progress bars
+**Voting Features:**
+- Simple card voting with thumbs up
+- Vote count display
+- Toggle vote on/off
+- Compact and full voting button variants
 
-3. **Date Dependencies:** Visualize card relationships
-   - Auto-detect dependencies from due dates
-   - Multiple dependency types (Finish-to-Start, Start-to-Start, etc.)
-   - Dependency chain visualization
-   - Violation detection (circular, future start, gaps)
-   - Critical path highlighting
+**Poll Features:**
+- Create polls with custom questions
+- Add 2+ options to each poll
+- Single or multiple choice voting
+- Poll expiration date
+- Real-time result updates
+- Visual progress bars
+- Leading option highlighting
+- Close/reopen polls
+- Delete polls
 
-**Gantt Chart Features:**
-- Weekly/monthly/quarterly views
-- Color-coded by column
-- Progress tracking
-- Dependency lines
-- Weekend/holiday highlighting
-- Today indicator
+**Poll Workflow:**
+1. Click "Create Poll" in a card
+2. Enter your question
+3. Add at least 2 options
+4. Optionally set an end date
+5. Enable "Allow multiple choices" if needed
+6. Share with your team
 
-**Milestone Features:**
-- Upcoming/In Progress/Missed groupings
-- Card linking to milestones
-- Progress percentage
-- Target date tracking
-- Color-coded status
+#### Slack/Discord Integrations 🔔
+1. **Connect Platforms:** Add Slack or Discord webhooks to receive notifications
+2. **Customize Events:** Choose which events trigger notifications
+3. **Rich Notifications:** Get formatted messages with card details
+4. **Test Integration:** Send a test notification to verify your setup
 
-**Dependency Features:**
-- Automatic detection from due dates
-- Manual dependency creation
-- Violation warnings
-- Chain visualization
-- Lag time tracking
+**Supported Events:**
+- 📋 Card Created
+- 🔄 Card Moved
+- ✏️ Card Edited
+- 🗑️ Card Deleted
+- 💬 Comment Added
+- 📅 Due Date Set
+- 👤 Member Assigned
 
-#### Offline Support & PWA 📱
-1. **Install as App:** Click the install button to add Trello Clone to your home screen
-2. **Works Offline:** All boards and cards are cached locally
-3. **Background Sync:** Changes sync automatically when back online
-4. **Conflict Resolution:** Last-write-wins for concurrent edits
+**Slack Integration:**
+1. Create an incoming webhook in Slack
+2. Copy the webhook URL
+3. Add integration in Trello Clone
+4. Select events to notify
 
-**Offline Features:**
-- View all boards and cards without internet
-- Create and edit cards offline
-- Changes queue and sync when online
-- Visual indicators for sync status
-- Connection quality detection
+**Discord Integration:**
+1. Create a webhook in your Discord channel
+2. Copy the webhook URL
+3. Add integration in Trello Clone
+4. Select events to notify
 
-**PWA Features:**
-- Install on iOS, Android, and desktop
-- App-like experience with standalone mode
-- Push notifications for updates
-- Automatic background sync
-- Service worker caching for fast loads
-
-**Sync Status Indicators:**
-- 🟢 Online - Connected and synced
-- 🔄 Syncing - Processing pending changes
-- 🟡 Pending - Changes waiting to sync
-- 🔴 Offline - Working offline, changes queued
+**Features:**
+- Toggle integrations on/off
+- Test notifications before saving
+- Rich embed formatting
+- Event filtering
+- Real-time notifications
 
 #### Dark Mode
 1. Click the moon/sun icon in the header

@@ -90,7 +90,7 @@ describe('IndexedDB Operations', () => {
       ];
 
       // All stores should be created
-      expectedStores.forEach((store) => {
+      expectedStores.forEach(store => {
         expect(store.length).toBeGreaterThan(0);
       });
     });
@@ -209,7 +209,7 @@ describe('Pending Operations Queue', () => {
         { id: 'op-2', type: 'card' },
       ];
 
-      queue = queue.filter((op) => op.id !== 'op-1');
+      queue = queue.filter(op => op.id !== 'op-1');
 
       expect(queue).toHaveLength(1);
       expect(queue[0].id).toBe('op-2');
@@ -222,9 +222,7 @@ describe('Pending Operations Queue', () => {
         { id: 'op-3', retryCount: 3, maxRetries: 3 },
       ];
 
-      const retriable = operations.filter(
-        (op) => op.retryCount < op.maxRetries
-      );
+      const retriable = operations.filter(op => op.retryCount < op.maxRetries);
 
       expect(retriable).toHaveLength(2);
     });
@@ -319,9 +317,7 @@ describe('Service Worker', () => {
       ];
       const currentVersion = 'v1';
 
-      const cachesToDelete = oldCaches.filter(
-        (cache) => !cache.includes(currentVersion)
-      );
+      const cachesToDelete = oldCaches.filter(cache => !cache.includes(currentVersion));
 
       expect(cachesToDelete).toHaveLength(3);
     });
@@ -386,7 +382,7 @@ describe('Offline Data Storage', () => {
         { id: 'card-3', boardId: 'board-2' },
       ];
 
-      const board1Cards = cards.filter((c) => c.boardId === 'board-1');
+      const board1Cards = cards.filter(c => c.boardId === 'board-1');
 
       expect(board1Cards).toHaveLength(2);
     });
@@ -398,7 +394,7 @@ describe('Offline Data Storage', () => {
         { id: 'card-3', columnId: 'column-1' },
       ];
 
-      const column1Cards = cards.filter((c) => c.columnId === 'column-1');
+      const column1Cards = cards.filter(c => c.columnId === 'column-1');
 
       expect(column1Cards).toHaveLength(2);
     });

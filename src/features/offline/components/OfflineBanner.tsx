@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 
 import { useState, useEffect, useCallback } from 'react';
 
-import { useOfflineStatus } from './useOfflineStatus';
-import { useSyncStore } from './useSyncStore';
+import { useOfflineStatus } from '../hooks/useOfflineStatus';
+import { useSyncStore } from '../hooks/useSyncStore';
 
 interface OfflineBannerProps {
   position?: 'top' | 'bottom';

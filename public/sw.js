@@ -1,5 +1,3 @@
-/// <reference lib="webworker" />
-
 const CACHE_NAME = 'trello-clone-v1';
 const STATIC_CACHE = 'trello-clone-static-v1';
 const DYNAMIC_CACHE = 'trello-clone-dynamic-v1';
@@ -92,7 +90,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Network first strategy
-async function networkFirstStrategy(request: Request, cacheName: string): Promise<Response> {
+async function networkFirstStrategy(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
 
@@ -116,7 +114,7 @@ async function networkFirstStrategy(request: Request, cacheName: string): Promis
 }
 
 // Cache first strategy
-async function cacheFirstStrategy(request: Request, cacheName: string): Promise<Response> {
+async function cacheFirstStrategy(request, cacheName) {
   const cachedResponse = await caches.match(request);
   if (cachedResponse) {
     return cachedResponse;
@@ -135,7 +133,7 @@ async function cacheFirstStrategy(request: Request, cacheName: string): Promise<
 }
 
 // Stale while revalidate strategy
-async function staleWhileRevalidate(request: Request, cacheName: string): Promise<Response> {
+async function staleWhileRevalidate(request, cacheName) {
   const cachedResponse = await caches.match(request);
 
   const fetchPromise = fetch(request)
@@ -152,7 +150,7 @@ async function staleWhileRevalidate(request: Request, cacheName: string): Promis
 }
 
 // Check if URL is a static asset
-function isStaticAsset(pathname: string): boolean {
+function isStaticAsset(pathname) {
   const staticExtensions = ['.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2'];
   return staticExtensions.some((ext) => pathname.endsWith(ext));
 }
@@ -169,7 +167,7 @@ self.addEventListener('sync', (event) => {
 });
 
 // Sync functions
-async function syncBoards(): Promise<void> {
+async function syncBoards() {
   const db = await openDB();
   const pendingBoards = await db.getAll('pending-operations', 'board');
 
@@ -187,7 +185,7 @@ async function syncBoards(): Promise<void> {
   }
 }
 
-async function syncCards(): Promise<void> {
+async function syncCards() {
   const db = await openDB();
   const pendingCards = await db.getAll('pending-operations', 'card');
 
@@ -205,7 +203,7 @@ async function syncCards(): Promise<void> {
   }
 }
 
-async function syncColumns(): Promise<void> {
+async function syncColumns() {
   const db = await openDB();
   const pendingColumns = await db.getAll('pending-operations', 'column');
 
@@ -224,7 +222,7 @@ async function syncColumns(): Promise<void> {
 }
 
 // IndexedDB helper
-function openDB(): Promise<IDBDatabase> {
+function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('trello-clone-offline', 1);
 
@@ -232,7 +230,7 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
 
     request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
+      const db = event.target.result;
 
       // Pending operations store
       if (!db.objectStoreNames.contains('pending-operations')) {
@@ -267,7 +265,7 @@ self.addEventListener('push', (event) => {
 
   const data = event.data.json();
 
-  const options: NotificationOptions = {
+  const options = {
     body: data.body,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
@@ -312,7 +310,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-async function cacheBoard(board: Board): Promise<void> {
+async function cacheBoard(board) {
   const db = await openDB();
 
   // Cache board
@@ -329,31 +327,10 @@ async function cacheBoard(board: Board): Promise<void> {
   }
 }
 
-async function clearOfflineData(): Promise<void> {
+async function clearOfflineData() {
   const db = await openDB();
   await db.clear('boards');
   await db.clear('cards');
   await db.clear('columns');
   await db.clear('pending-operations');
-}
-
-// Type declarations
-interface Board {
-  id: string;
-  title: string;
-  columns: Column[];
-}
-
-interface Column {
-  id: string;
-  title: string;
-  cards: Card[];
-  boardId?: string;
-}
-
-interface Card {
-  id: string;
-  title: string;
-  boardId?: string;
-  columnId?: string;
 }
