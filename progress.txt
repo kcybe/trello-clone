@@ -1,0 +1,37 @@
+# Progress Log
+Run: 3829db65-15ec-4622-892e-7665331bf446
+Task: Implement Slack/Discord integrations for trello-clone
+Started: Tuesday, February 10th, 2026 — 7:22 AM (Asia/Jerusalem)
+
+## Codebase Patterns
+- Prisma schema is located at `prisma/schema.prisma`
+- Better-Auth models are at the top, followed by Trello Clone models
+- All relations use `onDelete: Cascade`
+- Migration files are stored in `prisma/migrations/`
+- Tests use vitest, run with `npx vitest run`
+- Format check uses prettier, run with `npm run format:check`
+- Build combines format:check + next build
+
+---
+
+## 2026-02-10 07:24 - INT-001: Add IntegrationConfig model to Prisma schema
+- Added IntegrationConfig model to prisma/schema.prisma with fields: id, type (slack|discord), name, webhookUrl, channelId, boardId, enabled, events (JSON), createdAt, updatedAt
+- Added relation to Board model with inverse relation on Board.integrations
+- Created migration file: prisma/migrations/20260210052254_add_integration_config/migration.sql
+- Ran prisma generate successfully
+- Applied migration to database
+- Added comprehensive tests for IntegrationConfig model (41 tests)
+- Typecheck passed, all tests passed
+- Committed with message: "feat: INT-001 - Add IntegrationConfig model to Prisma schema"
+- **Learnings:** Prisma requires inverse relations on both sides; SQLite used for dev database; migrations stored in prisma/migrations/ with timestamp prefixes
+
+## 2026-02-10 07:32 - INT-002: Create Slack webhook notification service
+- Created src/lib/services/slack-webhook.ts with formatSlackMessage and sendSlackNotification functions
+- Implemented all event types: card_created, card_moved, card_edited, card_deleted, comment_added, due_date_set, member_assigned
+- Each event has emoji indicator and human-readable label
+- Supports card info (title, column, description, due date, url)
+- Includes user info and timestamp in context block
+- Error handling with validation for webhook URL format
+- Created comprehensive tests (21 tests) covering all event types and error scenarios
+- TypeScript typecheck passes, all tests pass
+- **Learnings:** Slack Block Kit uses nested object structure for text; context block elements need proper SlackTextObject typing; vitest mock fetch with vi.fn() for testing async notifications
