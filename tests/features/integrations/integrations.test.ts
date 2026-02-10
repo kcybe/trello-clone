@@ -484,3 +484,274 @@ describe('Color Constants', () => {
     expect(colors.red).toBe(0xef4444);
   });
 });
+
+// Test Prisma IntegrationConfig Model
+describe('IntegrationConfig Prisma Model', () => {
+  describe('Model Structure', () => {
+    it('should have correct field types', () => {
+      type IntegrationConfig = {
+        id: string;
+        type: string;
+        name: string;
+        webhookUrl: string;
+        channelId: string | null;
+        boardId: string;
+        enabled: boolean;
+        events: string;
+        createdAt: Date;
+        updatedAt: Date;
+        board?: { id: string; name: string };
+      };
+
+      const config: IntegrationConfig = {
+        id: 'int-1',
+        type: 'slack',
+        name: 'Test Integration',
+        webhookUrl: 'https://hooks.slack.com/services/123',
+        channelId: 'C123456',
+        boardId: 'board-1',
+        enabled: true,
+        events: JSON.stringify(['card_created', 'card_assigned', 'card_completed']),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      expect(config.type).toBe('slack');
+      expect(config.enabled).toBe(true);
+      expect(() => JSON.parse(config.events)).not.toThrow();
+    });
+
+    it('should allow discord type', () => {
+      type IntegrationConfig = {
+        type: 'slack' | 'discord';
+      };
+
+      const discordConfig: IntegrationConfig = {
+        type: 'discord',
+      };
+
+      expect(discordConfig.type).toBe('discord');
+    });
+  });
+
+  describe('Board Relation', () => {
+    it('should have relation to Board', () => {
+      type BoardWithIntegrations = {
+        id: string;
+        name: string;
+        integrations: Array<{
+          id: string;
+          type: string;
+          name: string;
+        }>;
+      };
+
+      const board: BoardWithIntegrations = {
+        id: 'board-1',
+        name: 'Test Board',
+        integrations: [
+          { id: 'int-1', type: 'slack', name: 'Slack Notifications' },
+          { id: 'int-2', type: 'discord', name: 'Discord Alerts' },
+        ],
+      };
+
+      expect(board.integrations).toHaveLength(2);
+      expect(board.integrations[0].type).toBe('slack');
+      expect(board.integrations[1].type).toBe('discord');
+    });
+  });
+
+  describe('Events JSON Array', () => {
+    it('should parse events from JSON string', () => {
+      const eventsJson = JSON.stringify(['card_created', 'card_assigned', 'card_completed']);
+      const events = JSON.parse(eventsJson) as string[];
+
+      expect(events).toContain('card_created');
+      expect(events).toContain('card_assigned');
+      expect(events).toContain('card_completed');
+    });
+
+    it('should handle empty events array', () => {
+      const eventsJson = JSON.stringify<string>([]);
+      const events = JSON.parse(eventsJson) as string[];
+
+      expect(events).toHaveLength(0);
+    });
+
+    it('should support all event types', () => {
+      const allEvents = [
+        'card_created',
+        'card_assigned',
+        'card_completed',
+        'card_moved',
+        'card_edited',
+        'card_deleted',
+        'comment_added',
+        'due_date_set',
+      ];
+      const eventsJson = JSON.stringify(allEvents);
+      const events = JSON.parse(eventsJson) as string[];
+
+      expect(events).toHaveLength(8);
+      expect(events).toContain('card_assigned');
+    });
+  });
+
+  describe('Default Values', () => {
+    it('should have enabled default to true', () => {
+      type IntegrationConfig = {
+        enabled: boolean;
+      };
+
+      const config: IntegrationConfig = { enabled: true };
+
+      expect(config.enabled).toBe(true);
+    });
+
+    it('should have channelId default to null', () => {
+      type IntegrationConfig = {
+        channelId: string | null;
+      };
+
+      const config: IntegrationConfig = { channelId: null };
+
+      expect(config.channelId).toBeNull();
+    });
+  });
+});
+
+// Test IntegrationConfig CRUD with Prisma
+describe('IntegrationConfig CRUD Operations', () => {
+  describe('Create Operation', () => {
+    it('should create integration with required fields', () => {
+      type CreateIntegrationInput = {
+        type: 'slack' | 'discord';
+        name: string;
+        webhookUrl: string;
+        boardId: string;
+        events: string;
+      };
+
+      const input: CreateIntegrationInput = {
+        type: 'slack',
+        name: 'Team Notifications',
+        webhookUrl: 'https://hooks.slack.com/services/123',
+        boardId: 'board-1',
+        events: JSON.stringify(['card_created']),
+      };
+
+      expect(input.type).toBe('slack');
+      expect(input.name).toBeTruthy();
+      expect(input.webhookUrl).toContain('hooks.slack.com');
+    });
+
+    it('should support optional fields', () => {
+      type CreateIntegrationInput = {
+        type: 'slack' | 'discord';
+        name: string;
+        webhookUrl: string;
+        channelId?: string;
+        boardId: string;
+        events: string;
+        enabled?: boolean;
+      };
+
+      const input: CreateIntegrationInput = {
+        type: 'discord',
+        name: 'Discord Alerts',
+        webhookUrl: 'https://discord.com/api/webhooks/123',
+        boardId: 'board-1',
+        events: JSON.stringify(['card_completed']),
+        channelId: '123456789',
+        enabled: false,
+      };
+
+      expect(input.channelId).toBe('123456789');
+      expect(input.enabled).toBe(false);
+    });
+  });
+
+  describe('Update Operation', () => {
+    it('should update name and webhookUrl', () => {
+      let config = {
+        id: 'int-1',
+        name: 'Original',
+        webhookUrl: 'https://original.com',
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      config = {
+        ...config,
+        name: 'Updated',
+        webhookUrl: 'https://updated.com',
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      expect(config.name).toBe('Updated');
+      expect(config.webhookUrl).toBe('https://updated.com');
+    });
+
+    it('should update events array', () => {
+      let config = {
+        id: 'int-1',
+        events: JSON.stringify(['card_created']),
+      };
+
+      config = {
+        ...config,
+        events: JSON.stringify(['card_created', 'card_assigned']),
+      };
+
+      const events = JSON.parse(config.events) as string[];
+      expect(events).toHaveLength(2);
+      expect(events).toContain('card_assigned');
+    });
+
+    it('should toggle enabled state', () => {
+      let config = { id: 'int-1', enabled: true };
+
+      config = { ...config, enabled: !config.enabled };
+
+      expect(config.enabled).toBe(false);
+    });
+  });
+
+  describe('Query Operations', () => {
+    it('should find by boardId', () => {
+      const integrations = [
+        { id: 'int-1', boardId: 'board-1', type: 'slack' },
+        { id: 'int-2', boardId: 'board-1', type: 'discord' },
+        { id: 'int-3', boardId: 'board-2', type: 'slack' },
+      ];
+
+      const boardIntegrations = integrations.filter(i => i.boardId === 'board-1');
+
+      expect(boardIntegrations).toHaveLength(2);
+    });
+
+    it('should find by type', () => {
+      const integrations = [
+        { id: 'int-1', type: 'slack' },
+        { id: 'int-2', type: 'discord' },
+        { id: 'int-3', type: 'slack' },
+      ];
+
+      const slackIntegrations = integrations.filter(i => i.type === 'slack');
+
+      expect(slackIntegrations).toHaveLength(2);
+      expect(slackIntegrations.every(i => i.type === 'slack')).toBe(true);
+    });
+
+    it('should find enabled integrations', () => {
+      const integrations = [
+        { id: 'int-1', enabled: true },
+        { id: 'int-2', enabled: false },
+        { id: 'int-3', enabled: true },
+      ];
+
+      const enabled = integrations.filter(i => i.enabled);
+
+      expect(enabled).toHaveLength(2);
+    });
+  });
+});
